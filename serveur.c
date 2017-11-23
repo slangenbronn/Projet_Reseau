@@ -18,6 +18,11 @@ int main(int argc, char* argv[]){
 
 	struct in6_addr ip;//IP de l'hote donnée en paramètre
 	int port;
+	int nbMessage = 3;
+	int socket;
+	int i;
+	struct sockaddr_in6 client;
+	char buf[1024];
 	//char* DHT[2];
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
@@ -34,10 +39,31 @@ int main(int argc, char* argv[]){
 		port = atoi(argv[2]);
 	}
 	
-	recevoirMsg(port);
+	/** Initialisation */
+	socket = initSocket();
+	initReception(socket, port);
 	
-	//Les hashs transmis de serveur à serveur seront toujours bon (>65 octest)	
-	//Les hashs seront vérifier lors de l'ajout dans une table de hashage
-	//lorsqu'un client fait la demande d'en ajouter un
+	for (i = 0; i < nbMessage; ++i){
+		printf("Attente message %d\n", i);
+
+		/** Reception Message */
+		client = recevoir(socket, buf);
+		
+		/** Affichage */
+		printf("Message recu: %s\n",buf);
+	    printf("Longueur du message: %li\n",strlen(buf));
+
+	    char adr_ip[INET_ADDRSTRLEN];
+	    if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET_ADDRSTRLEN)==NULL){
+	        perror("inet_ntop\n");
+	        exit(EXIT_FAILURE);
+	    }
+	    printf("Ip source: %s\n",adr_ip);
+	    printf("Numero de port de l'expediteur: %d\n",client.sin6_port);
+	}
+	
+
+	/** Fermeture */
+	closeSocket(port);
 	return 0;
 }
