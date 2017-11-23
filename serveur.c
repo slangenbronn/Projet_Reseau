@@ -24,7 +24,8 @@ int main(int argc, char* argv[]){
 
 	//Si == 0 alors le port n'est pas un nombre, sinon s'en est un
 	if(verification_port(argv[2]) == 0){
-		fprintf(stderr, "Le numéro de port \'%s\' n'est pas un nombre\n", argv[2]);
+		fprintf(stderr, "Le numéro de port \'%s\' n'est pas \
+		un nombre\n", argv[2]);
 		exit(1);
 	}
 	else{
