@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include "communication.h"
 
 int main(int argc, char* argv[]){
 
@@ -16,7 +17,6 @@ int main(int argc, char* argv[]){
 
 	char* adresse = malloc(sizeof(INET6_ADDRSTRLEN));
 	int port;
-	char *DHT[];
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	recuperer_adresse(argv[1], adresse);
