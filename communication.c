@@ -10,12 +10,16 @@
 #include <netdb.h>
 #include <string.h>
 
+<<<<<<< HEAD
 /**Fonction de reception*/
+=======
+/** --Ouverture socket-- */
+>>>>>>> b9d64c3fef1ed3ab3fe83d461374e021c901e70f
 /**
- * Ouvre un socket pour la reception
+ * @brief Ouvre un socket pour la reception
  * @return id du socket
  */
-int initReception(){
+int initSocket(){
     int sockfd;
 
     // socket factory
@@ -29,14 +33,22 @@ int initReception(){
 }
 
 /**
- * Reçois un message
+ * @brief Ferme le socket ouvert
+ * @param sockfd socket à fermer
+ */
+void closeSocket(int sockfd){
+    close(sockfd);
+}
+
+/** --Fonction de reception-- */
+/**
+ * @brief Reçois un message
  * @param sockfd id du socket utilisé
  * @param port port d'écoute
  * @param buf buffeur pour récupérer le message
  * @return les informations de l'expéditeur
  */
 struct sockaddr_in6 recevoir(int sockfd, int port, char* buf){
-    //char buf[1024];
     socklen_t addrlen;
 
     struct sockaddr_in6 my_addr;
@@ -68,21 +80,15 @@ struct sockaddr_in6 recevoir(int sockfd, int port, char* buf){
     return client;
 }
 
-/**
- * Ferme le socket ouvert
- * @param sockfd socket à fermer
- */
-void closeReception(int sockfd){
-    close(sockfd);
-}
+
 
 /**
- * Ouvre un socket pour recevoir un message puis ferme le socket
+ * @brief Ouvre un socket pour recevoir un message puis ferme le socket
  * @param port port de reception
  */
 void recevoirMsg(int port){
     char buf[1024];
-    int sockfd = initReception();
+    int sockfd = initSocket();
     
     struct sockaddr_in6 client = recevoir(sockfd, port, buf);
 
@@ -97,12 +103,12 @@ void recevoirMsg(int port){
     printf("Ip source: %s\n",adr_ip);
     printf("Numero de port de l'expediteur: %d\n",client.sin6_port);
 
-    closeReception(sockfd);
+    closeSocket(sockfd);
 }
 
-/** Fonction d'envoie */
+/** --Fonction d'envoie-- */
 /**
- * Envoie un message
+ * @brief Envoie un message
  * @param ip ip du destinataire
  * @param port port du destinataire
  * @param msg message à envoyer
