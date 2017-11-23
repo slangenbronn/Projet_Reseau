@@ -17,6 +17,11 @@ int main(int argc, char* argv[]){
 
 	char* adresse = malloc(sizeof(INET6_ADDRSTRLEN));
 	int port;
+	int nbMessage = 3;
+	int socket;
+	int i;
+	struct sockaddr_in6 client;
+	char buf[1024];
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	recuperer_adresse(argv[1], adresse);
@@ -32,7 +37,31 @@ int main(int argc, char* argv[]){
 		port = atoi(argv[2]);
 	}
 	
-	recevoirMsg(port);
+	/** Initialisation */
+	socket = initSocket();
+	initReception(socket, port);
 	
+	for (i = 0; i < nbMessage; ++i){
+		printf("Attente message %d\n", i);
+
+		/** Reception Message */
+		client = recevoir(socket, buf);
+		
+		/** Affichage */
+		printf("Message recu: %s\n",buf);
+	    printf("Longueur du message: %li\n",strlen(buf));
+
+	    char adr_ip[INET_ADDRSTRLEN];
+	    if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET_ADDRSTRLEN)==NULL){
+	        perror("inet_ntop\n");
+	        exit(EXIT_FAILURE);
+	    }
+	    printf("Ip source: %s\n",adr_ip);
+	    printf("Numero de port de l'expediteur: %d\n",client.sin6_port);
+	}
+	
+
+	/** Fermeture */
+	closeSocket(port);
 	return 0;
 }

@@ -6,7 +6,8 @@ int initSocket();
 void closeSocket(int sockfd);
 
 /** --Fonction de reception-- */
-struct sockaddr_in6 recevoir(int sockfd, int port, char* buf);
+void initReception(int sockfd, int port);
+struct sockaddr_in6 recevoir(int sockfd, char* buf);
 void recevoirMsg(int port);
 
 /** --Fonction d'envoie-- */

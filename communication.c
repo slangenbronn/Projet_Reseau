@@ -37,24 +37,20 @@ void closeSocket(int sockfd){
 
 /** --Fonction de reception-- */
 /**
- * @brief Reçois un message
- * @param sockfd id du socket utilisé
- * @param port port d'écoute
- * @param buf buffeur pour récupérer le message
- * @return les informations de l'expéditeur
+ * @brief Bind le socket pour la reception
+ * @param sockfd socket à binder
+ * @param port pour du socket
  */
-struct sockaddr_in6 recevoir(int sockfd, int port, char* buf){
+void initReception(int sockfd, int port){
     socklen_t addrlen;
 
     struct sockaddr_in6 my_addr;
-    struct sockaddr_in6 client;
 
     // init local addr structure and other params
     my_addr.sin6_family = AF_INET6;
     my_addr.sin6_port   = port;
     my_addr.sin6_addr   = in6addr_any; // Ici pour changer addr serveur.
     addrlen             = sizeof(struct sockaddr_in6);
-    memset(buf,'\0',1024);
 
     // bind addr structure with socket
     if(bind(sockfd,(struct sockaddr *)&my_addr,addrlen) == -1)
@@ -63,6 +59,24 @@ struct sockaddr_in6 recevoir(int sockfd, int port, char* buf){
         close(sockfd);
         exit(EXIT_FAILURE);
     }
+}
+
+/**
+ * @brief Reçois un message
+ * @param sockfd id du socket utilisé
+ * @param port port d'écoute
+ * @param buf buffeur pour récupérer le message
+ * @return les informations de l'expéditeur
+ */
+struct sockaddr_in6 recevoir(int sockfd, char* buf){
+    socklen_t addrlen;
+
+    //struct sockaddr_in6 my_addr;
+    struct sockaddr_in6 client;
+
+    //
+    addrlen             = sizeof(struct sockaddr_in6);
+    memset(buf,'\0',1024);
 
     // reception de la chaine de caracteres
     if(recvfrom(sockfd,buf,1024,0,(struct sockaddr *)&client,&addrlen) == -1)
@@ -84,8 +98,9 @@ struct sockaddr_in6 recevoir(int sockfd, int port, char* buf){
 void recevoirMsg(int port){
     char buf[1024];
     int sockfd = initSocket();
-    
-    struct sockaddr_in6 client = recevoir(sockfd, port, buf);
+    initReception(sockfd, port);
+
+    struct sockaddr_in6 client = recevoir(sockfd, buf);
 
     printf("Message recu: %s\n",buf);
     printf("Longueur du message: %li\n",strlen(buf));
