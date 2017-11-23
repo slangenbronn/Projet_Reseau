@@ -23,11 +23,9 @@ int main(int argc, char* argv[]){
 	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
-	//char* DHT[2];
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
-	//printf("%s", ip.s6_addr);
 
 	//Si == 0 alors le port n'est pas un nombre, sinon s'en est un
 	if(verification_port(argv[2]) == 0){
