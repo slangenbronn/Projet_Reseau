@@ -1,13 +1,15 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-/** Fonction de reception */
-int initReception();
+/** --Ouverture socket-- */
+int initSocket();
+void closeSocket(int sockfd);
+
+/** --Fonction de reception-- */
 struct sockaddr_in6 recevoir(int sockfd, int port, char* buf);
-void closeReception(int sockfd);
 void recevoirMsg(int port);
 
-/** Fonction d'envoie */
+/** --Fonction d'envoie-- */
 void envoieMsg(struct in6_addr ip, int port, char* msg);
 
 
