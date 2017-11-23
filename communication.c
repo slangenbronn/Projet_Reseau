@@ -8,8 +8,13 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <string.h>
 
+<<<<<<< HEAD
+/**Fonction de reception*/
+=======
 /** --Ouverture socket-- */
+>>>>>>> b9d64c3fef1ed3ab3fe83d461374e021c901e70f
 /**
  * @brief Ouvre un socket pour la reception
  * @return id du socket
@@ -153,12 +158,15 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
     close(sockfd);
 }
 
-
-void recuperer_adresse(char* adresse, char *ip6){
+/**
+ * @brief Donne l'adresse correspondante au host donnée en paramètre
+ *
+ * @param adresse Host d'on nous voulons l'adresse IPV6
+ * @param ip6 L'adresse est enregistré dans cette variable
+ */
+struct in6_addr recuperer_adresse(char* adresse){
 
     struct addrinfo hints, *res;
-    void *addr;
-    char ipstr[INET6_ADDRSTRLEN];
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET6; // IPv6
@@ -172,26 +180,51 @@ void recuperer_adresse(char* adresse, char *ip6){
 
     //On récupère l'adresse qui est contenu dans la structure res
     struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)res->ai_addr;
-    addr = &(ipv6->sin6_addr);
-
-    // Conversion de l'adresse IP en une chaîne de caractères
-    inet_ntop(res->ai_family, addr, ipstr, sizeof ipstr);
 
     // Libération de la mémoire occupée par les enregistrements
     freeaddrinfo(res);
 
-    strcpy(ip6, ipstr);
+	return ipv6->sin6_addr;
+
 }
 
+/**
+ * @brief Vérifie si le numéro de port donné en argument est bien 
+ * un nombre ou non
+ *
+ * @param port Chaine contenant le numéro de port à vérifier
+ */
 int verification_port(char* port){
 
     int taille = strlen(port);
     int i;
     int is_number = 1;
     for(i = 0; i < taille; i++){
+		//Vérifie tous les caractère de la chaine pour voir si ce sont tous
+		//des chiffres
         if(port[i] > '9' || port[i] < '0'){
             is_number = 0;
         }
     }
     return is_number;
 }
+
+/**
+ * @brief Insert dans la table de hashage du serveur un hash associé à une IP
+ *
+ * @param hash Chaine de caractère contenant le hash à ajouter
+ * @param ip6 Adresse à associer au hash
+ * @param DHT Table de hashage dans laquelle ajouter le hash et l'IP
+ * @param taille Taille du tableau actuelle
+ */
+/*void insertion_hash(char* hash, char* ip6, char** DHT, int taille){
+	
+	//Si le hash est plus petit que 65 octets => erreur
+	if(strlen()){
+
+	}
+	
+	DHT[taille+1] = malloc(sizeof(hash)+sizeof(ip6));
+	strcpy(&DHT[taille+1][0], &hash);
+	strcpy(&DHT[taille+1][1], &ip6);
+}*/

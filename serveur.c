@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include "communication.h"
+#include <netinet/in.h>
 
 int main(int argc, char* argv[]){
 
@@ -15,17 +16,18 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 
-	char* adresse = malloc(sizeof(INET6_ADDRSTRLEN));
+	struct in6_addr ip;//IP de l'hote donnée en paramètre
 	int port;
 	int nbMessage = 3;
 	int socket;
 	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
+	//char* DHT[2];
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
-	recuperer_adresse(argv[1], adresse);
-	printf("IPV6 : %s\n", adresse);
+	ip = recuperer_adresse(argv[1]);
+	//printf("%s", ip.s6_addr);
 
 	//Si == 0 alors le port n'est pas un nombre, sinon s'en est un
 	if(verification_port(argv[2]) == 0){
