@@ -1,5 +1,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 /** Fonction de reception */
 int initReception();
@@ -11,5 +12,7 @@ void recevoirMsg(int port);
 void envoieMsg(struct in6_addr ip, int port, char* msg);
 
 
-void recuperer_adresse(char* adresse, char *ip6);
+struct in6_addr recuperer_adresse(char* adresse);
 int verification_port(char* port);
+
+//void insertion_hash(char* hash, char* ip6, char** DHT, int taille);
