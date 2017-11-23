@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
 	
 	/** Initialisation */
 	socket = initSocket();
-	initReception(socket, port);
+	initReception(socket, port, ip);
 	
 	for (i = 0; i < nbMessage; ++i){
 		printf("Attente message %d\n", i);

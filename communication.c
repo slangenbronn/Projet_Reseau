@@ -10,11 +10,8 @@
 #include <netdb.h>
 #include <string.h>
 
-<<<<<<< HEAD
-/**Fonction de reception*/
-=======
+
 /** --Ouverture socket-- */
->>>>>>> b9d64c3fef1ed3ab3fe83d461374e021c901e70f
 /**
  * @brief Ouvre un socket pour la reception
  * @return id du socket
@@ -46,7 +43,7 @@ void closeSocket(int sockfd){
  * @param sockfd socket à binder
  * @param port pour du socket
  */
-void initReception(int sockfd, int port){
+void initReception(int sockfd, int port, struct in6_addr ip){
     socklen_t addrlen;
 
     struct sockaddr_in6 my_addr;
@@ -54,7 +51,7 @@ void initReception(int sockfd, int port){
     // init local addr structure and other params
     my_addr.sin6_family = AF_INET6;
     my_addr.sin6_port   = port;
-    my_addr.sin6_addr   = in6addr_any; // Ici pour changer addr serveur.
+    my_addr.sin6_addr   = ip; // Ici pour changer addr serveur.
     addrlen             = sizeof(struct sockaddr_in6);
 
     // bind addr structure with socket
@@ -103,7 +100,7 @@ struct sockaddr_in6 recevoir(int sockfd, char* buf){
 void recevoirMsg(int port){
     char buf[1024];
     int sockfd = initSocket();
-    initReception(sockfd, port);
+    initReception(sockfd, port, in6addr_any);
 
     struct sockaddr_in6 client = recevoir(sockfd, buf);
 
