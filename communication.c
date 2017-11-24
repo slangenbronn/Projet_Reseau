@@ -197,31 +197,11 @@ int verification_port(char* port){
     int i;
     int is_number = 1;
     for(i = 0; i < taille; i++){
-		//Vérifie tous les caractère de la chaine pour voir si ce sont tous
-		//des chiffres
-        if(port[i] > '9' || port[i] < '0'){
+	//Vérifie tous les caractère de la chaine pour voir si ce sont tous
+	//des chiffres
+		if(port[i] > '9' || port[i] < '0'){
             is_number = 0;
         }
     }
     return is_number;
 }
-
-/**
- * @brief Insert dans la table de hashage du serveur un hash associé à une IP
- *
- * @param hash Chaine de caractère contenant le hash à ajouter
- * @param ip6 Adresse à associer au hash
- * @param DHT Table de hashage dans laquelle ajouter le hash et l'IP
- * @param taille Taille du tableau actuelle
- */
-/*void insertion_hash(char* hash, char* ip6, char** DHT, int taille){
-	
-	//Si le hash est plus petit que 65 octets => erreur
-	if(strlen()){
-
-	}
-	
-	DHT[taille+1] = malloc(sizeof(hash)+sizeof(ip6));
-	strcpy(&DHT[taille+1][0], &hash);
-	strcpy(&DHT[taille+1][1], &ip6);
-}*/
