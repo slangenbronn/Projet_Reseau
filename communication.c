@@ -1,3 +1,8 @@
+/**
+ * @file communication.c
+ * @author Florian GUILLEMEAU & Sylvain LANGENBRONN
+ */
+
 #include "communication.h"
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -153,6 +158,105 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
 
     // close the socket
     close(sockfd);
+}
+
+/** --Format de données-- */
+
+/**
+ * @brief Renvoie le type associé à la string
+ * @param string chaine du type
+ * @return type associé
+ */
+type_t getTypeFromString(char* string){
+    if (strcmp(string, "PUT") == 0){
+        return PUT;
+    }
+    else if (strcmp(string, "GET") == 0){
+        return GET;
+    }
+    else{
+        fprintf(stderr, "type inconnue: %s\n", string);
+        exit(1);
+    }
+}
+
+/**
+ * @brief Crée une chaine dans le format de données
+ * @param type type de message
+ * @param message message à envoyer
+ * @return message encapsulé dans le format
+ */
+char* creationFormat(type_t type, char* message){
+    char* buf;
+    unsigned short tailleMsg = strlen(message);
+    char ty[1];
+    char tai[2];
+    int taille, index = 0;
+
+    if (tailleMsg > TAILLE_MSG_MAX){
+        fprintf(stderr, "taille du message trop grand\n");
+        exit(1);
+    }
+
+    taille = sizeof(type_t) + sizeof(short) + tailleMsg;
+    buf = malloc(taille);
+
+    ty[0] = type;
+    tai[0] = (char)(tailleMsg >> 8);
+    //tai[0] = 1;
+    tai[1] = (char)tailleMsg;
+    //t[0] = (char)tailleMsg - '0'
+    memset(buf, '\0', taille);
+
+    // Insertion du type
+    strncpy(buf + index, ty, 1);
+    index += 1;
+
+    // Insertion de la taille
+    buf[index] = tai[0];
+    buf[index+1] = tai[1];
+    index += sizeof(short);
+
+    // Insertion du message
+    strncat(buf+index, message, tailleMsg);
+
+    return buf;
+}
+
+/**
+ * @brief Retourne le type contenue dans le format
+ * @param format format à decrypter
+ * @return type dans le format
+ */
+type_t getTypeFromFormat(char* format){
+    return (type_t)format[0];
+}
+
+/**
+ * Renvoie la taille contenue dans le format
+ * @param format format à décrypter
+ * @return taille
+ */
+short getTailleFromFormat(char* format){
+    short taille;
+    
+    taille = format[1];
+    taille = (taille<<8) + format[2];
+
+    return taille;
+}
+
+/**
+ * Renvoie le message contenue dans le format
+ * @param format format à décrypter
+ * @return message
+ */
+char* getMsgFromFormat(short taille, char* format){
+    char* message = malloc(sizeof(char)*taille);
+
+    strcpy(message, format+sizeof(type_t)+sizeof(short));
+
+    return message;
 }
 
 /**

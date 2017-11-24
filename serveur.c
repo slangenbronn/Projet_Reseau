@@ -1,3 +1,10 @@
+/**
+ * @file serveur.c
+ * @author Florian GUILLEMEAU & Sylvain LANGENBRONN
+ *
+ * ./pg_name IPv4_addr port_number
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -36,7 +43,7 @@ int main(int argc, char* argv[]){
 	else{
 		port = atoi(argv[2]);
 	}
-	
+
 	/** Initialisation */
 	socket = initSocket();
 	initReception(socket, port, ip);
@@ -60,7 +67,6 @@ int main(int argc, char* argv[]){
 	    printf("Numero de port de l'expediteur: %d\n",client.sin6_port);
 	}
 	
-
 	/** Fermeture */
 	closeSocket(port);
 	return 0;
