@@ -168,10 +168,10 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
  * @return type associé
  */
 type_t getTypeFromString(char* string){
-    if (strcmp(string, "PUT")){
+    if (strcmp(string, "PUT") == 0){
         return PUT;
     }
-    else if (strcmp(string, "GET")){
+    else if (strcmp(string, "GET") == 0){
         return GET;
     }
     else{
@@ -189,20 +189,74 @@ type_t getTypeFromString(char* string){
 char* creationFormat(type_t type, char* message){
     char* buf;
     unsigned short tailleMsg = strlen(message);
-    char t[2];
-    int taille = sizeof(type_t) + sizeof(short) + sizeof(char)*tailleMsg;
+    char ty[1];
+    char tai[2];
+    int taille, index = 0;
+
+    if (tailleMsg > TAILLE_MSG_MAX){
+        fprintf(stderr, "taille du message trop grand\n");
+        exit(1);
+    }
+
+    taille = sizeof(type_t) + sizeof(short) + tailleMsg;
     buf = malloc(taille);
 
-    t[0] = (char)(tailleMsg >> 8);
-    t[1] = (char)tailleMsg;
+    ty[0] = type;
+    tai[0] = (char)(tailleMsg >> 8);
+    //tai[0] = 1;
+    tai[1] = (char)tailleMsg;
+    //t[0] = (char)tailleMsg - '0'
     memset(buf, '\0', taille);
 
-    buf[0] = type;
-    buf[1] = t[0];
-    buf[2] = t[1];
-    strcat(buf, message);
+    // Insertion du type
+    strncpy(buf + index, ty, 1);
+    index += 1;
+
+    // Insertion de la taille
+    buf[index] = tai[0];
+    buf[index+1] = tai[1];
+    index += sizeof(short);
+
+    // Insertion du message
+    strncat(buf+index, message, tailleMsg);
 
     return buf;
+}
+
+/**
+ * @brief Retourne le type contenue dans le format
+ * @param format format à decrypter
+ * @return type dans le format
+ */
+type_t getTypeFromFormat(char* format){
+    return (type_t)format[0];
+}
+
+/**
+ * Renvoie la taille contenue dans le format
+ * @param format format à décrypter
+ * @return taille
+ */
+short getTailleFromFormat(char* format){
+    short taille;
+    
+    taille = format[1];
+    taille = (taille<<8) + format[2];
+
+    return taille;
+}
+
+/**
+ * Renvoie le message contenue dans le format
+ * @param format format à décrypter
+ * @return message
+ */
+char* getMsgFromFormat(short taille, char* format){
+    char* message = malloc(sizeof(char)*taille);
+
+    strcpy(message, format+sizeof(type_t)+sizeof(short));
+
+    return message;
 }
 
 /**
