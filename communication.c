@@ -168,10 +168,10 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
  * @return type associé
  */
 type_t getTypeFromString(char* string){
-    if (strcmp(string, "PUT") == 0){
+    if (strcmp(string, "put") == 0){
         return PUT;
     }
-    else if (strcmp(string, "GET") == 0){
+    else if (strcmp(string, "get") == 0){
         return GET;
     }
     else{
