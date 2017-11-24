@@ -1,3 +1,10 @@
+/**
+ * @file serveur.c
+ * @author Florian GUILLEMEAU & Sylvain LANGENBRONN
+ *
+ * ./pg_name IPv4_addr port_number
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

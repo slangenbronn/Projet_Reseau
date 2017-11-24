@@ -1,3 +1,8 @@
+/**
+ * @file communication.c
+ * @author Florian GUILLEMEAU & Sylvain LANGENBRONN
+ */
+
 #include "communication.h"
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -153,6 +158,51 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
 
     // close the socket
     close(sockfd);
+}
+
+/** --Format de données-- */
+
+/**
+ * @brief Renvoie le type associé à la string
+ * @param string chaine du type
+ * @return type associé
+ */
+type_t getTypeFromString(char* string){
+    if (strcmp(string, "PUT")){
+        return PUT;
+    }
+    else if (strcmp(string, "GET")){
+        return GET;
+    }
+    else{
+        fprintf(stderr, "type inconnue: %s\n", string);
+        exit(1);
+    }
+}
+
+/**
+ * @brief Crée une chaine dans le format de données
+ * @param type type de message
+ * @param message message à envoyer
+ * @return message encapsulé dans le format
+ */
+char* creationFormat(type_t type, char* message){
+    char* buf;
+    unsigned short tailleMsg = strlen(message);
+    char t[2];
+    int taille = sizeof(type_t) + sizeof(short) + sizeof(char)*tailleMsg;
+    buf = malloc(taille);
+
+    t[0] = (char)(tailleMsg >> 8);
+    t[1] = (char)tailleMsg;
+    memset(buf, '\0', taille);
+
+    buf[0] = type;
+    buf[1] = t[0];
+    buf[2] = t[1];
+    strcat(buf, message);
+
+    return buf;
 }
 
 /**
