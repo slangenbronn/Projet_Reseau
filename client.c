@@ -43,15 +43,19 @@ int main(int argc, char **argv)
     if(argc != 4)
     {
         printf("USAGE: %s @dest port_num string\n", argv[0]);
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
-	port_nb=atoi(argv[2]);
 
     // get addr from command line and convert it
-    if(inet_pton(AF_INET6,argv[1],&ip) != 1)
-    {
-        perror("inet_pton\n");
-		exit(EXIT_FAILURE);
+    ip = recuperer_adresse(argv[1]);
+    //Si == 0 alors le port n'est pas un nombre, sinon s'en est un
+    if(verification_port(argv[2]) == 0){
+        fprintf(stderr, "Le numéro de port \'%s\' n'est pas \
+        un nombre\n", argv[2]);
+        exit(1);
+    }
+    else{
+        port_nb = atoi(argv[2]);
     }
 	
     envoieMsg(ip, port_nb, argv[3]);
