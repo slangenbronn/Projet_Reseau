@@ -269,6 +269,52 @@ char* getMsgFromFormat(short taille, char* format){
     return message;
 }
 
+/** -- Création du message-- */
+/**
+ * @brief Crée le message à envoyer.
+ * @param hash hash à envoyer
+ * @param ips tableau d'ips à envoyer
+ * @param taille taille du tableau d'ips
+ * @return concaténation des différents éléments séparer par un séparateur
+ */
+char* creationMsg(char* hash, struct in6_addr* ips, int taille){
+    char* msg;
+    char tSep[1];
+    char ipstr[INET6_ADDRSTRLEN];
+    int tailleMsg, tailleHash;
+    int i;
+
+    // Calcule de la taille du message
+    tailleHash = strlen(hash);
+    tailleMsg = tailleHash + INET6_ADDRSTRLEN*taille + taille;
+    msg = malloc(tailleMsg);
+
+    // Copies le hash
+    strncpy(msg, hash, tailleHash);
+
+    if (taille > 0)
+    {
+        tSep[0] = SEPARATEUR_HASH_IP;
+        strncat(msg, tSep, 1);
+        tSep[0] = SEPARATEUR_IPS;
+
+        //Copies les ips
+        for (i = 0; i < taille; i++){
+            // Conversion de l'adresse IP en une chaîne de caractères
+            inet_ntop(AF_INET6, (void*)&(ips[i]), ipstr, sizeof(ipstr));
+            
+            // Concatene la chaine
+            strncat(msg, ipstr, sizeof(ipstr));
+           
+            if (i < taille-1){
+                strncat(msg, tSep, 1);
+            }
+        }
+    }
+    
+    return msg;
+}
+
 /**
  * @brief Donne l'adresse correspondante au host donnée en paramètre
  *

@@ -15,13 +15,66 @@
 #include <string.h>
 #include <arpa/inet.h>
 
+
+
+
+/**
+ * @brief Réalise les actions associées à la commdande
+ * @param cmd commande à réalisé
+ * @param ipServeur ip du serveur à contacter
+ * @param port port du serveur à contacter
+ * @param hash hash à transmettre ou demander
+ * @param ipAssocie ip associé au hash
+ */
+/*void interpretationCmd(
+    type_t cmd, 
+    struct in6_addr ipServeur,
+    int port,
+    char* hash,
+    struct in6_addr ipAssocie){
+    char* msg, msgFormate;
+    switch(cmd){
+        case PUT:
+            // Faire format msg
+            // Si ipAssocié est null
+            if (ipAssocie != NULL){
+                
+            }
+            // Si ipAssocié n'est pas null
+            else{
+                msg = hash;
+            }
+            // Encapsuler message
+
+            // Envoyer msg
+            free(msg);
+            break;
+        case GET:
+            // Faire msg
+            msg = hash;
+
+            //Encapsuler msg
+            msgFormate = creationFormat(cmd, msg);
+            
+            // Envoyer msg
+
+            // Afficher reponse
+
+            break
+        default:
+            fprintf(stderr, "Type inconnue\n");
+            exit(1);
+    }
+}*/
+
 int main(int argc, char **argv)
 {
 	int port_nb;	
     struct in6_addr ipServeur, ipAssocie;
+    type_t cmd;
 
     // check the number of args on command line
-    if(argc >= 5 && argc <= 6){
+    if(argc < 5 ||   argc > 6){
         printf("USAGE: %s IP PORT COMMANDE HASH [IP]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -38,6 +91,10 @@ int main(int argc, char **argv)
         port_nb = atoi(argv[2]);
     }
 
+    // Vérification de la commande
+    cmd = getTypeFromString(argv[3]);
+    printf("%d\n", cmd);
+
     // Vérification du hash
     if (verificationHash(argv[4]) == 0){
         fprintf(stderr, "hassh incorrecte\n");
@@ -49,7 +106,12 @@ int main(int argc, char **argv)
         printf("ipAssocie %s\n", ipAssocie.s6_addr); //Pour eviter les erreurs de unused
     }
     
-    envoieMsg(ipServeur, port_nb, argv[3]);
+    char* msg = creationMsg(argv[4], &ipServeur, 1);
+    //char* msg = creationMsg(argv[4], &ipServeur, 1);
+    printf("msg: %s\n", msg);
+    printf("port, %d\n", port_nb);
+    free(msg);
+    //envoieMsg(ipServeur, port_nb, argv[3]);
     
     return 0;
 }
