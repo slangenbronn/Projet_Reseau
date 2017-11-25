@@ -15,6 +15,16 @@
 #include <netdb.h>
 #include <string.h>
 
+/** --Fonction de vérification du hash-- */
+/**
+ * @brief Vérification de la validité du hash
+ * @param hash hash à vérifier
+ * @return 1 si correct sinon 0
+ */
+int verificationHash(char* hash){
+    int taille = strlen(hash);
+    return taille >= TAILLE_HASH_MIN && taille < TAILLE_HASH_MAX;
+}
 
 /** --Ouverture socket-- */
 /**
