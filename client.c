@@ -106,9 +106,28 @@ int main(int argc, char **argv)
         printf("ipAssocie %s\n", ipAssocie.s6_addr); //Pour eviter les erreurs de unused
     }
     
-    char* msg = creationMsg(argv[4], &ipServeur, 1);
+    struct in6_addr tab[3];
+    tab[0] = ipServeur;
+    tab[1] = ipAssocie;
+    tab[2] = ipServeur;
+
+    char* msg = creationMsg(argv[4], tab, 3);
     //char* msg = creationMsg(argv[4], &ipServeur, 1);
     printf("msg: %s\n", msg);
+    
+    struct in6_addr *tabIp = malloc(sizeof(*tabIp));
+    //int taille;
+    /*char* hash = *///decryptageMsg(msg, tabIp, &taille);
+
+    info_message imsg = decryptageMsg(msg);
+    //int i;
+    //printf("hash %s\n", hash);
+    printf("taille: %d\n", imsg.taille);
+    /*
+    for (i = 0; i < count; ++i){
+        printf("ip%d: %s\n", );
+    }*/
+    free(tabIp);
     printf("port, %d\n", port_nb);
     free(msg);
     //envoieMsg(ipServeur, port_nb, argv[3]);
