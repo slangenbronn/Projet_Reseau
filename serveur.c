@@ -31,7 +31,11 @@ struct table{
 };
 
 /**
- * @brief Initialise une table contenant les hash les ip associés à ces derniers
+ * @brief Initialise une table contenant les hash les ip associés 
+ * à ces derniers
+ *
+ * @return Un pointeur initialisé qui permettra de connaitre le premier hash
+ * enregsitré dans la table
  */
 table *init_DHT(){
 
@@ -79,6 +83,38 @@ table_hash *existence_hash(table *t, char* hash){
     return temp;
 }
 
+/**
+ * @brief Vérifie l'existence ou non du couple hash-ip passé en paramètre
+ *
+ * @param t Liste contenant les hash et les ip
+ * @param hash Valeur du hash que l'on veut trouver
+ * @param ip Adresse ip d'on nous voulons savoir si elle est associé au hash
+ *
+ * @return 1 si le couple existe, 0 sinon
+ */
+int existence_couple(table* t, char* hash, char* ip){
+
+	int trouve = 0;
+	table_hash* temp_hash = existence_hash(t, hash);
+
+	//Si le hash à été trouvé dans la table
+	if(temp_hash != NULL){
+		//On cherche l'ip
+		table_ip* temp_ip = temp_hash->t_ip;
+		//On continue de chercher tant que l'on a pas atteint la fin 
+		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
+		while(temp_ip != NULL && trouve == 0){
+			if(temp_ip->ip == ip){
+				trouve = 1;
+			}
+			else{
+				temp_ip = temp_ip->ip_suivant;
+			}
+		}
+	}
+
+	return trouve;
+}
 
 /**
  * @brief Insert dans la liste des hash et des ip associés un nouvel ip
