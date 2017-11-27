@@ -91,11 +91,35 @@ table_hash *existence_hash(table *t, char* hash){
 }
 
 /**
+ * @brief Compte le nombre d'adresse IP pour un hash donnée
+ * 
+ * @param t Table dans laquelle nous voulons travailler
+ * @param hash Valeur du hash dont nous voulons connaitre 
+ * le nombre d'ip associé
+ *
+ * @return Renvoie le nombre d'ip associé au hash donné
+ */
+int nombre_ip(table* t, char* hash){
+
+	int nb_ip = 0;
+	table_hash* temp_h = existence_hash(t, hash);
+	if(temp_h != NULL){
+		table_ip* temp_ip = temp_h->t_ip;
+		while(temp_ip != NULL){
+			nb_ip++;
+			temp_ip = temp_ip->ip_suivant;
+		}
+	}
+
+	return nb_ip;
+}
+
+/**
  * @brief Vérifie l'existence ou non du couple hash-ip passé en paramètre
  *
  * @param t Liste contenant les hash et les ip
  * @param hash Valeur du hash que l'on veut trouver
- * @param ip Adresse ip d'on nous voulons savoir si elle est associé au hash
+ * @param ip Adresse ip dont nous voulons savoir si elle est associé au hash
  *
  * @return 1 si le couple existe, 0 sinon
  */
@@ -245,16 +269,24 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 	}
 }
 
+
+/**
+ * @brief Renvoie un tableau d'ip assicié à un hash
+ *
+ * @param t Table dans laquelle sont stocké les ip et les hash
+ * @param hash Hash dont nous voulons les ip
+ *
+ */
 struct in6_addr* get_ip(table* t, char* hash){
 
 	table_hash* temp_h = existence_hash(t, hash);
 	struct in6_addr* table_ip6;
 	if(temp_h != NULL){
+		int taille = nombre_ip(t, hash);
 		int i = 0;
-		table_ip6 = malloc(sizeof(struct in6_addr));
+		table_ip6 = malloc(sizeof(struct in6_addr)*taille);
 		table_ip* temp_ip = temp_h->t_ip;
 		while(temp_ip != NULL){
-			table_ip6 = realloc(table_ip6, sizeof(table_ip6)+sizeof(struct in6_addr));
 			table_ip6[i] = temp_ip->ip;
 			temp_ip = temp_ip->ip_suivant;
 			i++;
