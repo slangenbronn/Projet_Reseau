@@ -19,7 +19,7 @@
 //Structure contenant un ip, et l'ip suivant, appartenant au même hash
 typedef struct table_ip table_ip;
 struct table_ip{
-	char* ip;
+	struct in6_addr ip;
 	table_ip *ip_suivant;
 };
 
@@ -99,7 +99,7 @@ table_hash *existence_hash(table *t, char* hash){
  *
  * @return 1 si le couple existe, 0 sinon
  */
-int existence_couple(table* t, char* hash, char* ip){
+int existence_couple(table* t, char* hash, struct in6_addr ip){
 
 	int trouve = 0;
 	table_hash* temp_hash = existence_hash(t, hash);
@@ -111,7 +111,7 @@ int existence_couple(table* t, char* hash, char* ip){
 		//On continue de chercher tant que l'on a pas atteint la fin 
 		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
 		while(temp_ip != NULL && trouve == 0){
-			if(temp_ip->ip == ip){
+			if(temp_ip->ip.s6_addr == ip.s6_addr){
 				trouve = 1;
 			}
 			else{
@@ -130,11 +130,11 @@ int existence_couple(table* t, char* hash, char* ip){
  * @param ip Adresse ip à ajouter
  * @param hash Valeur du hash a associer à l'ip
  */
-void insertion_DHT(table *t, char* ip, char* hash){
+void insertion_DHT(table *t, struct in6_addr ip, char* hash){
 
 	//On créé le nouvel ip à inserer dans la liste
 	table_ip *nouveau_ip = malloc(sizeof(*nouveau_ip));
-	nouveau_ip->ip = ip;
+	memcpy(nouveau_ip->ip.s6_addr, ip.s6_addr, sizeof(struct in6_addr));
 
 	//On vérifie l'existence du hash demandé
 	table_hash *temp = existence_hash(t, hash);
@@ -160,6 +160,86 @@ void insertion_DHT(table *t, char* ip, char* hash){
 		temp->t_ip = nouveau_ip;
 	}
 }
+
+/**
+ * @brief Supprime un ip de la table associé à un hash
+ *
+ * @param t Liste contenant les hash et les ip
+ * @param hash Valeur du hash que l'on veut trouver
+ * @param ip Adresse ip que nous voulons supprimer
+ */
+void supprimer_ip(table* t, char* hash, struct in6_addr ip){
+
+	int trouve = 0;
+    table_hash* temp_hash = existence_hash(t, hash);
+
+    //Si le hash à été trouvé dans la table
+    if(temp_hash != NULL){
+        //On cherche l'ip
+        table_ip* temp_ip = temp_hash->t_ip;
+		table_ip* temp_pre_ip = NULL;
+        //On continue de chercher tant que l'on a pas atteint la fin
+        //de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
+        while(temp_ip != NULL && trouve == 0){
+            if(temp_ip->ip.s6_addr == ip.s6_addr){
+                trouve = 1;
+            }
+            else{
+				temp_pre_ip = temp_ip;	
+                temp_ip = temp_ip->ip_suivant;
+            }
+        }
+		//Si l'ip précédent de l'ip actuel dans le tableau n'est pas null
+		//Ce n'est donc pas le premier objet de la liste
+		if(temp_pre_ip != NULL){
+			temp_pre_ip->ip_suivant = temp_ip->ip_suivant;
+			free(temp_ip);
+		}
+		//Si l'ip précédent est NULL, alors l'ip cherché est le premier de
+		//la liste
+		else{
+			//Si l'ip est le seul de la liste on supprime le hash
+			if(temp_ip->ip_suivant == NULL){
+				free(temp_ip);
+				trouve = 0;
+				table_hash* temp_pre_hash = NULL;
+				temp_hash = t->premier;
+				while(temp_hash != NULL && trouve == 0){
+					if(temp_hash->hash == hash){
+						trouve = 1;
+					}
+					else{
+						temp_pre_hash = temp_hash;
+						temp_hash = temp_hash->hash_suivant;
+					}
+				}
+
+				if(temp_pre_hash == NULL){
+					//SI c'est le seul de la liste
+					if(temp_hash->hash_suivant == NULL){
+						t->premier = NULL;
+						free(temp_hash);
+					}
+					else{
+						t->premier = temp_hash->hash_suivant;
+						free(temp_hash);
+					}
+				}
+				else{
+					temp_pre_hash->hash_suivant = temp_hash->hash_suivant;
+					free(temp_hash);
+				}
+			}
+			//Si l'ip n'est pas le seul de la liste
+			else{
+				temp_hash->t_ip = temp_ip->ip_suivant;
+				free(temp_ip);
+			}
+		}
+    }
+}
+
+
 
 int main(int argc, char* argv[]){
 
@@ -214,5 +294,6 @@ int main(int argc, char* argv[]){
 	
 	/** Fermeture */
 	closeSocket(port);
+	
 	return 0;
 }
