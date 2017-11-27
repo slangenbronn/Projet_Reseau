@@ -122,8 +122,8 @@ void recevoirMsg(int port){
     printf("Message recu: %s\n",buf);
     printf("Longueur du message: %li\n",strlen(buf));
 
-    char adr_ip[INET_ADDRSTRLEN];
-    if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET_ADDRSTRLEN)==NULL){
+    char adr_ip[INET6_ADDRSTRLEN];
+    if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET6_ADDRSTRLEN)==NULL){
         perror("inet_ntop\n");
         exit(EXIT_FAILURE);
     }
@@ -313,6 +313,50 @@ char* creationMsg(char* hash, struct in6_addr* ips, int taille){
     }
     
     return msg;
+}
+
+info_message decryptageMsg(char* msg){
+    char *tmpHash, *tmpIp;
+    char delim[1];;
+    char tabIp[100][INET6_ADDRSTRLEN];
+    int i;
+    info_message infMsg;
+
+    // Récupération du hash
+    delim[0] = SEPARATEUR_HASH_IP;
+    tmpHash = strtok(msg, delim);
+    infMsg.hash = malloc(strlen(tmpHash));
+    strncpy(infMsg.hash, tmpHash, strlen(tmpHash));
+
+    
+    // Prépare le reste de la chaine pour le traitement
+    tmpHash =  strtok(NULL, delim);
+    i = 0;
+    if (tmpHash != NULL){
+        delim[0] = SEPARATEUR_IPS;
+        tmpIp =  strtok(tmpHash, delim);
+        
+        // Récupération des ips
+        if (tmpIp != NULL){
+            strncpy(tabIp[i], tmpIp, INET6_ADDRSTRLEN);
+            i++;
+        }
+        while((tmpIp = strtok(NULL, delim)) != NULL){
+            strncpy(tabIp[i], tmpIp, INET6_ADDRSTRLEN);
+            i++;
+        }
+    }
+    
+    infMsg.taille = i;
+
+    // Convertie en type ip
+    int j;
+    infMsg.ips = malloc(sizeof(struct in6_addr)*infMsg.taille);
+    for (j = 0; j < infMsg.taille; ++j){
+        infMsg.ips[j] = recuperer_adresse(tabIp[j]);   
+    }
+
+    return infMsg;
 }
 
 /**
