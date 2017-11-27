@@ -364,6 +364,19 @@ info_message decryptageMsg(char* msg){
     return infMsg;
 }
 
+
+/** --Fonction Utile-- */
+/**
+ * @brief Transforme une adresse ip en string
+ * @param ip ip à transformer
+ * @return ip en string
+ */
+char* ipToString(struct in6_addr ip){
+    char* ipstr = malloc(INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6, (void*)&(ip), ipstr, sizeof(ipstr));
+    return ipstr;
+}
+
 /**
  * @brief Donne l'adresse correspondante au host donnée en paramètre
  *
