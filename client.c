@@ -56,9 +56,11 @@ void interpretationCmd(
             
 
             int tailleMsg = getTailleFromFormat(msgFormate);
+            printf("taille %d\n", tailleMsg);
             printf("msg: %s\n", getMsgFromFormat(tailleMsg, msgFormate));
             // Envoyer msg
-            //envoieMsg(ipServeur, port, msgFormate);
+            envoieMsg(ipServeur, port, msgFormate);
+            printf("fin put\n");
 
             break;
         case GET:
@@ -98,8 +100,8 @@ void interpretationCmd(
     }
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
+
     int port_nb;    
     struct in6_addr ipServeur, ipTmp, *ipAssocie = NULL;
     type_t cmd;
@@ -124,26 +126,19 @@ int main(int argc, char **argv)
 
     // Vérification de la commande
     cmd = getTypeFromString(argv[3]);
-    printf("%d\n", cmd);
 
     // Vérification du hash
     if (verificationHash(argv[4]) == 0){
-        fprintf(stderr, "hassh incorrecte\n");
+        fprintf(stderr, "hash incorrecte\n");
         exit(1);
     }
     // Vérification de l'ip en option
     if (argc >= 6){
         ipTmp = recuperer_adresse(argv[5]);
         ipAssocie = &ipTmp;
-        //printf("ipAssocie %s\n", ipAssocie.s6_addr); //Pour eviter les erreurs de unused
     }
     
     interpretationCmd(cmd, ipServeur, port_nb, argv[4], ipAssocie);
-
-    /*char* msg = creationMsg(argv[4], &ipServeur, 1);
-    printf("msg: %s\n", msg);
-    printf("port, %d\n", port_nb);
-    free(msg);*/
     
     return 0;
 }

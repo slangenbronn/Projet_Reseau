@@ -239,7 +239,38 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
     }
 }
 
+void interpretationCmd(type_t cmd, 
+	struct sockaddr_in6 envoyeur,
+	char* msg, 
+	table *t){
 
+	int i;
+	info_message infMessage;
+
+	switch(cmd){
+		case PUT:
+			printf("PUT\n");
+			printf("msg: %s\n", msg);
+			infMessage = decryptageMsg(msg);
+			if (infMessage.taille != 0){
+				for (i = 0; i < infMessage.taille; ++i){
+	                insertion_DHT(t, infMessage.ips[i], infMessage.hash);
+	            }
+			}
+			// Si il n'y a pas d'ip on ajoute l'ip de l'envoyeur
+			else{
+				insertion_DHT(t, envoyeur.sin6_addr, infMessage.hash);
+			}
+			break;
+		case GET:
+			break;
+		default:
+			fprintf(stderr, "commande inconnue\n");
+			printf("%s\n", ipToString(envoyeur.sin6_addr));
+			exit(1);
+	}
+	printf("fin cmd\n");	
+}
 
 int main(int argc, char* argv[]){
 
@@ -255,6 +286,8 @@ int main(int argc, char* argv[]){
 	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
+	char *msg;
+	table *t;
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
@@ -269,6 +302,8 @@ int main(int argc, char* argv[]){
 		port = atoi(argv[2]);
 	}
 
+	t = init_DHT();
+
 	/** Initialisation */
 	socket = initSocket();
 	initReception(socket, port, ip);
@@ -277,10 +312,33 @@ int main(int argc, char* argv[]){
 		printf("Attente message %d\n", i);
 
 		/** Reception Message */
+		printf("attend msg\n");
 		client = recevoir(socket, buf);
-		
+		printf("Message reçus\n");
+		switch(fork()){
+			case -1:
+				perror("fork");
+				exit(1);
+				break;
+			case 0:
+				/* Fils */
+				msg = getMsgFromFormat(
+						getTailleFromFormat(buf),
+						buf);
+				interpretationCmd(
+					getTypeFromFormat(buf), 
+					client,
+					msg,
+					t);
+				exit(0);
+				break;
+			default:
+				/* Pere */
+				printf("pere: On réécoute\n");
+				break;
+		}
 		/** Affichage */
-		printf("Message recu: %s\n",buf);
+		/*printf("Message recu: %s\n",buf);
 	    printf("Longueur du message: %li\n",strlen(buf));
 
 	    char adr_ip[INET_ADDRSTRLEN];
@@ -289,7 +347,7 @@ int main(int argc, char* argv[]){
 	        exit(EXIT_FAILURE);
 	    }
 	    printf("Ip source: %s\n",adr_ip);
-	    printf("Numero de port de l'expediteur: %d\n",client.sin6_port);
+	    printf("Numero de port de l'expediteur: %d\n",client.sin6_port);*/
 	}
 	
 	/** Fermeture */

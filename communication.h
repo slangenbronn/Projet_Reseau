@@ -8,7 +8,7 @@
 
 /** --Type pour le format de données-- */
 #define TAILLE_MSG_MAX 1024
-enum type {GET, PUT};
+enum type {GET=1, PUT};
 typedef char type_t;
 // +------+--------+---------+
 // | TYPE | TAILLE | MESSAGE |
