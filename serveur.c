@@ -181,65 +181,89 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
         //On continue de chercher tant que l'on a pas atteint la fin
         //de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
         while(temp_ip != NULL && trouve == 0){
-            if(temp_ip->ip.s6_addr == ip.s6_addr){
+            if(strcmp((ipToString(temp_ip->ip)), (ipToString(ip))) == 0){
                 trouve = 1;
             }
             else{
-				temp_pre_ip = temp_ip;	
-                temp_ip = temp_ip->ip_suivant;
+				if(temp_ip->ip_suivant != NULL){
+					temp_pre_ip = temp_ip;
+                	temp_ip = temp_ip->ip_suivant;
+				}
             }
         }
-		//Si l'ip précédent de l'ip actuel dans le tableau n'est pas null
-		//Ce n'est donc pas le premier objet de la liste
-		if(temp_pre_ip != NULL){
-			temp_pre_ip->ip_suivant = temp_ip->ip_suivant;
-			free(temp_ip);
-		}
-		//Si l'ip précédent est NULL, alors l'ip cherché est le premier de
-		//la liste
-		else{
-			//Si l'ip est le seul de la liste on supprime le hash
-			if(temp_ip->ip_suivant == NULL){
-				free(temp_ip);
-				trouve = 0;
-				table_hash* temp_pre_hash = NULL;
-				temp_hash = t->premier;
-				while(temp_hash != NULL && trouve == 0){
-					if(temp_hash->hash == hash){
-						trouve = 1;
-					}
-					else{
-						temp_pre_hash = temp_hash;
-						temp_hash = temp_hash->hash_suivant;
-					}
-				}
 
-				if(temp_pre_hash == NULL){
-					//SI c'est le seul de la liste
-					if(temp_hash->hash_suivant == NULL){
-						t->premier = NULL;
-						free(temp_hash);
-					}
-					else{
-						t->premier = temp_hash->hash_suivant;
-						free(temp_hash);
-					}
-				}
-				else{
-					temp_pre_hash->hash_suivant = temp_hash->hash_suivant;
-					free(temp_hash);
-				}
-			}
-			//Si l'ip n'est pas le seul de la liste
-			else{
-				temp_hash->t_ip = temp_ip->ip_suivant;
+		//Si l'adresse IP à été trouvé pour ce hash
+		if(trouve == 1){
+			//Si l'ip précédent de l'ip actuel dans le tableau n'est pas null
+			//Ce n'est donc pas le premier objet de la liste
+			if(temp_pre_ip != NULL){
+				temp_pre_ip->ip_suivant = temp_ip->ip_suivant;
 				free(temp_ip);
 			}
+			//Si l'ip précédent est NULL, alors l'ip cherché est le premier de
+			//la liste
+			else{
+				//Si l'ip est le seul de la liste on supprime le hash
+				if(temp_ip->ip_suivant == NULL){
+					free(temp_ip);
+					trouve = 0;
+					table_hash* temp_pre_hash = NULL;
+					temp_hash = t->premier;
+					while(temp_hash != NULL && trouve == 0){
+						if(temp_hash->hash == hash){
+							trouve = 1;
+						}
+						else{
+							temp_pre_hash = temp_hash;
+							temp_hash = temp_hash->hash_suivant;
+						}
+					}
+	
+					if(temp_pre_hash == NULL){
+						//SI c'est le seul de la liste
+						if(temp_hash->hash_suivant == NULL){
+							t->premier = NULL;
+							free(temp_hash);
+						}
+						else{
+							t->premier = temp_hash->hash_suivant;
+							free(temp_hash);
+						}
+					}
+					else{
+						temp_pre_hash->hash_suivant = temp_hash->hash_suivant;
+						free(temp_hash);
+					}
+				}
+				//Si l'ip n'est pas le seul de la liste
+				else{
+					temp_hash->t_ip = temp_ip->ip_suivant;
+					free(temp_ip);
+				}
+			}
 		}
-    }
+	}
 }
 
+struct in6_addr* get_ip(table* t, char* hash){
 
+	table_hash* temp_h = existence_hash(t, hash);
+	struct in6_addr* table_ip6;
+	if(temp_h != NULL){
+		int i = 0;
+		table_ip6 = malloc(sizeof(struct in6_addr));
+		table_ip* temp_ip = temp_h->t_ip;
+		while(temp_ip != NULL){
+			table_ip6 = realloc(table_ip6, sizeof(table_ip6)+sizeof(struct in6_addr));
+			table_ip6[i] = temp_ip->ip;
+			temp_ip = temp_ip->ip_suivant;
+			i++;
+		}
+	}
+
+	return table_ip6;
+	
+}
 
 int main(int argc, char* argv[]){
 
