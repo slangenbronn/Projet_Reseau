@@ -198,10 +198,11 @@ type_t getTypeFromString(char* string){
  */
 char* creationFormat(type_t type, char* message){
     char* buf;
-    unsigned short tailleMsg = strlen(message);
+    short tailleMsg = strlen(message);
     char ty[1];
     char tai[2];
-    int taille, index = 0;
+    short taille; 
+    int index = 0;
 
     if (tailleMsg > TAILLE_MSG_MAX){
         fprintf(stderr, "taille du message trop grand\n");
@@ -212,10 +213,8 @@ char* creationFormat(type_t type, char* message){
     buf = malloc(taille);
 
     ty[0] = type;
-    tai[0] = (char)(tailleMsg >> 8);
-    //tai[0] = 1;
-    tai[1] = (char)tailleMsg;
-    //t[0] = (char)tailleMsg - '0'
+    tai[0] = ~taille;
+    tai[1] = (~taille)>>8;
     memset(buf, '\0', taille);
 
     // Insertion du type
@@ -250,9 +249,8 @@ type_t getTypeFromFormat(char* format){
 short getTailleFromFormat(char* format){
     short taille;
     
-    taille = format[1];
-    taille = (taille<<8) + format[2];
-
+    taille = ((~format[2])<<8) + ~format[1];
+    
     return taille;
 }
 

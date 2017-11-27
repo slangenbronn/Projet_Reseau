@@ -284,6 +284,11 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 	}
 }
 
+void interpretationCmd(type_t cmd, 
+	struct sockaddr_in6 envoyeur,
+	char* msg, 
+	table *t){
+
 
 /**
  * @brief Renvoie un tableau d'ip assicié à un hash
@@ -326,6 +331,8 @@ int main(int argc, char* argv[]){
 	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
+	char *msg;
+	table *t;
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
@@ -340,6 +347,8 @@ int main(int argc, char* argv[]){
 		port = atoi(argv[2]);
 	}
 
+	t = init_DHT();
+
 	/** Initialisation */
 	socket = initSocket();
 	initReception(socket, port, ip);
@@ -348,10 +357,33 @@ int main(int argc, char* argv[]){
 		printf("Attente message %d\n", i);
 
 		/** Reception Message */
+		printf("attend msg\n");
 		client = recevoir(socket, buf);
-		
+		printf("Message reçus\n");
+		switch(fork()){
+			case -1:
+				perror("fork");
+				exit(1);
+				break;
+			case 0:
+				/* Fils */
+				msg = getMsgFromFormat(
+						getTailleFromFormat(buf),
+						buf);
+				interpretationCmd(
+					getTypeFromFormat(buf), 
+					client,
+					msg,
+					t);
+				exit(0);
+				break;
+			default:
+				/* Pere */
+				printf("pere: On réécoute\n");
+				break;
+		}
 		/** Affichage */
-		printf("Message recu: %s\n",buf);
+		/*printf("Message recu: %s\n",buf);
 	    printf("Longueur du message: %li\n",strlen(buf));
 
 	    char adr_ip[INET_ADDRSTRLEN];
@@ -360,7 +392,7 @@ int main(int argc, char* argv[]){
 	        exit(EXIT_FAILURE);
 	    }
 	    printf("Ip source: %s\n",adr_ip);
-	    printf("Numero de port de l'expediteur: %d\n",client.sin6_port);
+	    printf("Numero de port de l'expediteur: %d\n",client.sin6_port);*/
 	}
 	
 	/** Fermeture */
