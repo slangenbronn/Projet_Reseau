@@ -315,6 +315,11 @@ char* creationMsg(char* hash, struct in6_addr* ips, int taille){
     return msg;
 }
 
+/**
+ * Décrypte le message
+ * @param msg message à décrypter
+ * @return les info contenus dans le message
+ */
 info_message decryptageMsg(char* msg){
     char *tmpHash, *tmpIp;
     char delim[1];;

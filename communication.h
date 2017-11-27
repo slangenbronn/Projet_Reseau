@@ -16,7 +16,7 @@ typedef char type_t;
 //   1o       2o      0-1ko
 
 /** --Constante pour le Hash-- */
-#define TAILLE_HASH_MAX 256
+#define TAILLE_HASH_MAX 128
 #define TAILLE_HASH_MIN 65
 
 /** --Séparateur-- */

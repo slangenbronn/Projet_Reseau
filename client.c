@@ -107,11 +107,9 @@ int main(int argc, char **argv)
     }
     
     char* msg = creationMsg(argv[4], &ipServeur, 1);
-    //char* msg = creationMsg(argv[4], &ipServeur, 1);
     printf("msg: %s\n", msg);
     printf("port, %d\n", port_nb);
     free(msg);
-    //envoieMsg(ipServeur, port_nb, argv[3]);
     
     return 0;
 }
