@@ -26,51 +26,82 @@
  * @param hash hash à transmettre ou demander
  * @param ipAssocie ip associé au hash
  */
-/*void interpretationCmd(
+void interpretationCmd(
     type_t cmd, 
     struct in6_addr ipServeur,
     int port,
-    char* hash,
-    struct in6_addr ipAssocie){
-    char* msg, msgFormate;
+    char *hash,
+    struct in6_addr *ipAssocie){
+
+    char *msg, *msgFormate;
+    char *buf;
+    int i;
     switch(cmd){
         case PUT:
             // Faire format msg
             // Si ipAssocié est null
             if (ipAssocie != NULL){
-                
+                printf("ipAssocie non null\n");
+                msg = creationMsg(hash, ipAssocie, 1);
             }
             // Si ipAssocié n'est pas null
             else{
-                msg = hash;
+                //msg = hash;
+                printf("ipAssocie null\n");
+                msg = creationMsg(hash, NULL, 0);
             }
             // Encapsuler message
+            msgFormate = creationFormat(cmd, msg);
+            //printf("msg format: %s\n", msgFormate);
+            
 
+            int tailleMsg = getTailleFromFormat(msgFormate);
+            printf("msg: %s\n", getMsgFromFormat(tailleMsg, msgFormate));
             // Envoyer msg
-            free(msg);
+            //envoieMsg(ipServeur, port, msgFormate);
+
             break;
         case GET:
             // Faire msg
-            msg = hash;
+            msg = creationMsg(hash, NULL, 0);
 
             //Encapsuler msg
             msgFormate = creationFormat(cmd, msg);
             
             // Envoyer msg
+            envoieMsg(ipServeur, port, msgFormate);
+
+            // Réception reponse
+            // Initialise l'écoute
+            int socket = initSocket();
+            initReception(socket, 3100, 
+                recuperer_adresse("::1"));
+
+            // Reçois la réponse
+            buf = NULL;
+            recevoir(socket, buf); // A changer
 
             // Afficher reponse
+            msg = getMsgFromFormat(
+                getTailleFromFormat(buf), 
+                buf);
+            info_message infMessage = decryptageMsg(msg);
 
-            break
+            printf("hash: %s\n", infMessage.hash);
+            for (i = 0; i < infMessage.taille; ++i){
+                printf("\tip%d %s\n", i, ipToString(infMessage.ips[i]));
+            }
+            break;
         default:
             fprintf(stderr, "Type inconnue\n");
             exit(1);
     }
-}*/
+}
 
 int main(int argc, char **argv)
 {
-	int port_nb;	
-    struct in6_addr ipServeur, ipAssocie;
+    int port_nb;    
+    struct in6_addr ipServeur, ipTmp, *ipAssocie = NULL;
     type_t cmd;
 
     // check the number of args on command line
@@ -102,14 +133,17 @@ int main(int argc, char **argv)
     }
     // Vérification de l'ip en option
     if (argc >= 6){
-        ipAssocie = recuperer_adresse(argv[5]);
-        printf("ipAssocie %s\n", ipAssocie.s6_addr); //Pour eviter les erreurs de unused
+        ipTmp = recuperer_adresse(argv[5]);
+        ipAssocie = &ipTmp;
+        //printf("ipAssocie %s\n", ipAssocie.s6_addr); //Pour eviter les erreurs de unused
     }
     
-    char* msg = creationMsg(argv[4], &ipServeur, 1);
+    interpretationCmd(cmd, ipServeur, port_nb, argv[4], ipAssocie);
+
+    /*char* msg = creationMsg(argv[4], &ipServeur, 1);
     printf("msg: %s\n", msg);
     printf("port, %d\n", port_nb);
-    free(msg);
+    free(msg);*/
     
     return 0;
 }
