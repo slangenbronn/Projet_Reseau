@@ -122,8 +122,8 @@ void recevoirMsg(int port){
     printf("Message recu: %s\n",buf);
     printf("Longueur du message: %li\n",strlen(buf));
 
-    char adr_ip[INET_ADDRSTRLEN];
-    if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET_ADDRSTRLEN)==NULL){
+    char adr_ip[INET6_ADDRSTRLEN];
+    if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET6_ADDRSTRLEN)==NULL){
         perror("inet_ntop\n");
         exit(EXIT_FAILURE);
     }
@@ -267,6 +267,101 @@ char* getMsgFromFormat(short taille, char* format){
     strcpy(message, format+sizeof(type_t)+sizeof(short));
 
     return message;
+}
+
+/** -- Création du message-- */
+/**
+ * @brief Crée le message à envoyer.
+ * @param hash hash à envoyer
+ * @param ips tableau d'ips à envoyer
+ * @param taille taille du tableau d'ips
+ * @return concaténation des différents éléments séparer par un séparateur
+ */
+char* creationMsg(char* hash, struct in6_addr* ips, int taille){
+    char* msg;
+    char tSep[1];
+    char ipstr[INET6_ADDRSTRLEN];
+    int tailleMsg, tailleHash;
+    int i;
+
+    // Calcule de la taille du message
+    tailleHash = strlen(hash);
+    tailleMsg = tailleHash + INET6_ADDRSTRLEN*taille + taille;
+    msg = malloc(tailleMsg);
+
+    // Copies le hash
+    strncpy(msg, hash, tailleHash);
+
+    if (taille > 0)
+    {
+        tSep[0] = SEPARATEUR_HASH_IP;
+        strncat(msg, tSep, 1);
+        tSep[0] = SEPARATEUR_IPS;
+
+        //Copies les ips
+        for (i = 0; i < taille; i++){
+            // Conversion de l'adresse IP en une chaîne de caractères
+            inet_ntop(AF_INET6, (void*)&(ips[i]), ipstr, sizeof(ipstr));
+            
+            // Concatene la chaine
+            strncat(msg, ipstr, sizeof(ipstr));
+           
+            if (i < taille-1){
+                strncat(msg, tSep, 1);
+            }
+        }
+    }
+    
+    return msg;
+}
+
+/**
+ * Décrypte le message
+ * @param msg message à décrypter
+ * @return les info contenus dans le message
+ */
+info_message decryptageMsg(char* msg){
+    char *tmpHash, *tmpIp;
+    char delim[1];;
+    char tabIp[100][INET6_ADDRSTRLEN];
+    int i;
+    info_message infMsg;
+
+    // Récupération du hash
+    delim[0] = SEPARATEUR_HASH_IP;
+    tmpHash = strtok(msg, delim);
+    infMsg.hash = malloc(strlen(tmpHash));
+    strncpy(infMsg.hash, tmpHash, strlen(tmpHash));
+
+    
+    // Prépare le reste de la chaine pour le traitement
+    tmpHash =  strtok(NULL, delim);
+    i = 0;
+    if (tmpHash != NULL){
+        delim[0] = SEPARATEUR_IPS;
+        tmpIp =  strtok(tmpHash, delim);
+        
+        // Récupération des ips
+        if (tmpIp != NULL){
+            strncpy(tabIp[i], tmpIp, INET6_ADDRSTRLEN);
+            i++;
+        }
+        while((tmpIp = strtok(NULL, delim)) != NULL){
+            strncpy(tabIp[i], tmpIp, INET6_ADDRSTRLEN);
+            i++;
+        }
+    }
+    
+    infMsg.taille = i;
+
+    // Convertie en type ip
+    int j;
+    infMsg.ips = malloc(sizeof(struct in6_addr)*infMsg.taille);
+    for (j = 0; j < infMsg.taille; ++j){
+        infMsg.ips[j] = recuperer_adresse(tabIp[j]);   
+    }
+
+    return infMsg;
 }
 
 /**

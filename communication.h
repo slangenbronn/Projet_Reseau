@@ -16,8 +16,20 @@ typedef char type_t;
 //   1o       2o      0-1ko
 
 /** --Constante pour le Hash-- */
-#define TAILLE_HASH_MAX 256
+#define TAILLE_HASH_MAX 128
 #define TAILLE_HASH_MIN 65
+
+/** --Séparateur-- */
+#define SEPARATEUR_HASH_IP '\t'
+#define SEPARATEUR_IPS '\n'
+// Format du message
+//HASH + SEPARATEUR_HASH_IP + IP + SEPARATEUR_IPS + IP + ...
+typedef struct infoMessage{
+	char* hash;
+	struct in6_addr* ips;
+	int taille;
+} info_message;
+
 
 /** --Fonction de vérification du hash-- */
 int verificationHash(char* hash);
@@ -40,6 +52,10 @@ char* creationFormat(type_t type, char* message);
 type_t getTypeFromFormat(char* format);
 short getTailleFromFormat(char* format);
 char* getMsgFromFormat(short taille, char* format);
+
+/** -- Création du message-- */
+char* creationMsg(char* hash, struct in6_addr* ips, int taille);
+info_message decryptageMsg(char* msg);
 
 struct in6_addr recuperer_adresse(char* adresse);
 int verification_port(char* port);
