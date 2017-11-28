@@ -293,17 +293,39 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
  *
  * @return 1 si le timer n'est pas dépassé, 0 sinon
  */
-int ip_valide(table_ip ip){
+int ip_valide(table_ip* ip){
 
 	time_t end;
 	time(&end);
-	if(difftime(end, ip.t_inser) >= 30){
+	if(difftime(end, ip->t_inser) >= 30){
 		return 0;
 	}
 	else{
 		return 1;
 	}
 }
+
+/**
+ * @brief Vérifie si les ip sont toujours valide ou non
+ *
+ * @param t Table contenant les hash et les ip associés
+ */
+void validite_ip(table* t){
+
+	table_hash* temp_h = t->premier;
+	table_ip* temp_ip = temp_h->t_ip;
+
+	while(temp_h != NULL){
+		while(temp_ip != NULL){
+			if(ip_valide(temp_ip) == 0){
+				supprimer_ip(t, temp_h->hash, temp_ip->ip);
+			}
+			temp_ip = temp_ip->ip_suivant;
+		}
+		temp_h = temp_h->hash_suivant;
+	}
+}
+
 
 /**
  * @brief Renvoie un tableau d'ip assicié à un hash
