@@ -79,7 +79,7 @@ table_hash *existence_hash(table *t, char* hash){
 		//On parcours toute la liste
 		while(i == 0 && temp != NULL){
 			//Jusqu'a trouver le hash voulu
-			if(temp->hash == hash){
+			if(strcmp(temp->hash, hash)==0){
 				i = 1;
 			}
 			else{
@@ -113,7 +113,7 @@ int existence_couple(table* t, char* hash, struct in6_addr ip){
 		//On continue de chercher tant que l'on a pas atteint la fin 
 		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
 		while(temp_ip != NULL && trouve == 0){
-			if(temp_ip->ip.s6_addr == ip.s6_addr){
+			if(strcmp(ipToString(temp_ip->ip), ipToString(ip))==0){ 
 				trouve = 1;
 			}
 			else{
@@ -138,7 +138,6 @@ int nombre_ip(table* t, char* hash){
 
 	int nb_ip = 0;
 	table_hash* temp_h = existence_hash(t, hash);
-	printf("%s\n", temp_h->hash);
 	if(temp_h != NULL){
 		table_ip* temp_ip = temp_h->t_ip;
 		while(temp_ip != NULL){
@@ -200,7 +199,7 @@ void supprimer_hash(table* t, char* hash){
 	table_hash* temp_h = t->premier;
 	
 	//Si le hash est le premier de la liste
-	if(temp_h->hash == hash){
+	if(strcmp(temp_h->hash, hash)==0){ 
 		t->premier = temp_h->hash_suivant;
 		//On libère la dernière ip associè à ce hash
 		free(temp_h->t_ip);
@@ -214,7 +213,7 @@ void supprimer_hash(table* t, char* hash){
 		temp_h = t->premier->hash_suivant;
 		//On cherche dans la liste le hash et son précédeceur
 		while(temp_h->hash_suivant != NULL && trouve == 0){
-			if(temp_h->hash == hash){
+			if(strcmp(temp_h->hash, hash)==0){
 				trouve = 1;
 			}
 			else{
@@ -380,30 +379,39 @@ void affiche(table* t){
 }
 
 
-void test(){
-
-	table* t = init_DHT();
-
-	insertion_DHT(t, recuperer_adresse("::1"), "15");
+void test(table *t){
+	struct in6_addr* tabIp;
+	int tailleTabIp;
+	
+	insertion_DHT(t, recuperer_adresse("::1"), "456");
 	insertion_DHT(t, recuperer_adresse("::1"), "21");
-	insertion_DHT(t, recuperer_adresse("::1"), "15");
+	insertion_DHT(t, recuperer_adresse("::2"), "456");
 	affiche(t);
 	printf("NB ip :%i\n", nombre_ip(t, "21"));
 }
 
+/**
+ * @brief Interprete la commande
+ * @param cmd commande à interpréter
+ * @param envoyeur info de l'envoyeur
+ * @param msg message reçus
+ * @param t table de hash 
+ */
 void interpretationCmd(type_t cmd, 
 	struct sockaddr_in6 envoyeur,
 	char* msg, 
 	table *t){
 
-	int i;
+	int i, tailleTabIp;
 	info_message infMessage;
+	struct in6_addr* tabIp;
+	char* msgFormat;
 
 	switch(cmd){
 		case PUT:
 			printf("PUT\n");
-			printf("msg: %s\n", msg);
 			infMessage = decryptageMsg(msg);
+
 			if (infMessage.taille != 0){
 				for (i = 0; i < infMessage.taille; ++i){
 					insertion_DHT(t, infMessage.ips[i], infMessage.hash);
@@ -415,17 +423,28 @@ void interpretationCmd(type_t cmd,
 			}
 			break;
 		case GET:
+			printf("GET\n");
+			infMessage = decryptageMsg(msg);
+			free(msg);
+			// On récupère le tableau d'ip associé
+			tailleTabIp = nombre_ip(t, infMessage.hash);
+			tabIp = get_ip(t, infMessage.hash);
+
+			// On initialise le message
+			msg = creationMsg(infMessage.hash, tabIp, tailleTabIp);
+			msgFormat = creationFormat(PUT, msg);
+
+			// Envoie du msg
+			envoieMsg(envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 			break;
 		default:
 			fprintf(stderr, "commande inconnue\n");
 			printf("%s\n", ipToString(envoyeur.sin6_addr));
 			exit(1);
-	}
-	printf("fin cmd\n");	
+	}	
 }
 
 int main(int argc, char* argv[]){
-
 	if(argc != 3){
 		printf("usage: %s <adresse> <port>\n", argv[0]);
 		exit(1);
@@ -456,74 +475,24 @@ int main(int argc, char* argv[]){
 
 	t = init_DHT();
 
-	test();
+	test(t);
+	//return 0;
+
 	/** Initialisation */
-	socket = initSocket();
-	initReception(socket, port, ip);
-	
-
-	//** Lacement de la recherche de validité dans les données */
-	int descripteurTube[2];
-	char messageFinExecution[1] = "\0";
-	if(pipe(descripteurTube) != 0){
-		perror("Creation pipe");
-		exit(1);
-	}
-
-	switch(fork()){
-		case -1:
-			perror("fork validité");
-			exit(1);
-			break;
-		case 0:
-			/* Fils */
-			close(descripteurTube[1]);
-			read(descripteurTube[0], messageFinExecution, 1);
-			while(strcmp(messageFinExecution,"\0")==0){
-				sleep(30);
-				validite_ip(t);
-				read(descripteurTube[0], messageFinExecution, 1);
-			}
-			
-		default:
-			/* Père */
-			close(descripteurTube[0]);
-			break;
-	}
+	socket = initSocketPort(port, ip);
 
 	for (i = 0; i < nbMessage; ++i){
-		printf("Attente message %d\n", i);
-
 		/** Reception Message */
-		printf("attend msg\n");
+		printf("\nAttente message %d\n", i);
 		client = recevoir(socket, buf);
 		printf("Message reçus\n");
-		switch(fork()){
-			case -1:
-				perror("fork");
-				exit(1);
-				break;
-			case 0:
-				/* Fils */
-				msg = getMsgFromFormat(
-						getTailleFromFormat(buf),
-						buf);
-				interpretationCmd(
-					getTypeFromFormat(buf), 
-					client,
-					msg,
-					t);
-				exit(0);
-				break;
-			default:
-				/* Pere */
-				printf("pere: On réécoute\n");
-				break;
-		}
+
+		msg = getMsgFromFormat(getTailleFromFormat(buf),buf);
+		interpretationCmd(getTypeFromFormat(buf), client, msg, t);
 	}
 	
 	/** Fermeture */
-	closeSocket(port);
+	close(port);
 	
 	return 0;
 }

@@ -28,10 +28,12 @@ int verificationHash(char* hash){
 
 /** --Ouverture socket-- */
 /**
- * @brief Ouvre un socket pour la reception
- * @return id du socket
+ * @brief initialise le socket avec un port spécifique
+ * @param port port attribué au socket
+ * @param ip ip du socket
+ * @return socket binder
  */
-int initSocket(){
+int initSocketPort(int port, struct in6_addr ip){
     int sockfd;
 
     // socket factory
@@ -41,15 +43,60 @@ int initSocket(){
         exit(EXIT_FAILURE);
     }
 
+    socklen_t addrlen;
+
+    struct sockaddr_in6 my_addr;
+
+    // init local addr structure and other params
+    my_addr.sin6_family = AF_INET6;
+    my_addr.sin6_port   = port;
+    my_addr.sin6_addr   = ip; // Ici pour changer addr serveur.
+    addrlen             = sizeof(struct sockaddr_in6);
+
+    // bind addr structure with socket
+    if(bind(sockfd,(struct sockaddr *)&my_addr,addrlen) == -1)
+    {
+        perror("bind"); 
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
     return sockfd;
 }
 
 /**
- * @brief Ferme le socket ouvert
- * @param sockfd socket à fermer
+ * @brief initialise le socket sans port spécifique
+ * @param ip associé au socket
+ * @return socket binder
  */
-void closeSocket(int sockfd){
-    close(sockfd);
+int initSocketSansPort(struct in6_addr ip){
+    int sockfd;
+
+    // socket factory
+    if((sockfd = socket(AF_INET6,SOCK_DGRAM,IPPROTO_UDP)) == -1)
+    {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+    socklen_t addrlen;
+
+    struct sockaddr_in6 my_addr;
+
+    // init local addr structure and other params
+    my_addr.sin6_family = AF_INET6;
+    my_addr.sin6_addr   = ip; // Ici pour changer addr serveur.
+    addrlen             = sizeof(struct sockaddr_in6);
+
+    // bind addr structure with socket
+    if(bind(sockfd,(struct sockaddr *)&my_addr,addrlen) == -1)
+    {
+        perror("bind"); 
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    return sockfd;
 }
 
 /** --Fonction de reception-- */
@@ -114,8 +161,7 @@ struct sockaddr_in6 recevoir(int sockfd, char* buf){
  */
 void recevoirMsg(int port){
     char buf[1024];
-    int sockfd = initSocket();
-    initReception(sockfd, port, in6addr_any);
+    int sockfd = initSocketPort(port, in6addr_any);
 
     struct sockaddr_in6 client = recevoir(sockfd, buf);
 
@@ -130,7 +176,7 @@ void recevoirMsg(int port){
     printf("Ip source: %s\n",adr_ip);
     printf("Numero de port de l'expediteur: %d\n",client.sin6_port);
 
-    closeSocket(sockfd);
+    close(sockfd);
 }
 
 /** --Fonction d'envoie-- */
@@ -170,8 +216,28 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
     close(sockfd);
 }
 
-/** --Format de données-- */
+void envoie(int sockfd, struct in6_addr ip, int port, char* msg){
+    socklen_t addrlen;
+    struct sockaddr_in6 dest;
 
+    // init remote addr structure and other params
+    dest.sin6_family = AF_INET6;
+    dest.sin6_port   = port;
+    dest.sin6_addr   = ip;
+    addrlen          = sizeof(struct sockaddr_in6);
+    
+    // send string
+    if(sendto(sockfd,msg,strlen(msg),0,(struct sockaddr *)&dest,addrlen) == -1){
+        perror("sendto\n");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // close the socket
+    //close(sockfd);
+}
+
+/** --Format de données-- */
 /**
  * @brief Renvoie le type associé à la string
  * @param string chaine du type

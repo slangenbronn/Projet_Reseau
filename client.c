@@ -34,7 +34,7 @@ void interpretationCmd(
     struct in6_addr *ipAssocie){
 
     char *msg, *msgFormate;
-    char *buf;
+    char buf[2048];
     int i;
     switch(cmd){
         case PUT:
@@ -61,7 +61,6 @@ void interpretationCmd(
             // Envoyer msg
             envoieMsg(ipServeur, port, msgFormate);
             printf("fin put\n");
-
             break;
         case GET:
             // Faire msg
@@ -70,29 +69,30 @@ void interpretationCmd(
             //Encapsuler msg
             msgFormate = creationFormat(cmd, msg);
             
+            // Initialise Socket
+            int socket = initSocketSansPort(in6addr_any);
+
             // Envoyer msg
-            envoieMsg(ipServeur, port, msgFormate);
+            //envoieMsg(ipServeur, port, msgFormate);
+            printf("envoie msg\n");
+            envoie(socket, ipServeur, port, msgFormate);
 
             // Réception reponse
-            // Initialise l'écoute
-            int socket = initSocket();
-            initReception(socket, 3100, 
-                recuperer_adresse("::1"));
-
-            // Reçois la réponse
-            buf = NULL;
-            recevoir(socket, buf); // A changer
-
+            printf("Attend msg\n");
+            recevoir(socket, buf);
+            printf("traite msg\n");
             // Afficher reponse
             msg = getMsgFromFormat(
                 getTailleFromFormat(buf), 
                 buf);
+            printf("msg: %s\n", msg);
             info_message infMessage = decryptageMsg(msg);
 
             printf("hash: %s\n", infMessage.hash);
             for (i = 0; i < infMessage.taille; ++i){
                 printf("\tip%d %s\n", i, ipToString(infMessage.ips[i]));
             }
+            close(socket);
             break;
         default:
             fprintf(stderr, "Type inconnue\n");
