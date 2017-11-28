@@ -235,81 +235,8 @@ void supprimer_hash(table* t, char* hash){
  * @param hash Valeur du hash que l'on veut trouver
  * @param ip Adresse ip que nous voulons supprimer
  */
-void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 
-	int trouve = 0;
-    table_hash* temp_hash = existence_hash(t, hash);
 
-    //Si le hash à été trouvé dans la table
-    if(temp_hash != NULL){
-        //On cherche l'ip
-        table_ip* temp_ip = temp_hash->t_ip;
-		table_ip* temp_pre_ip = NULL;
-        //On continue de chercher tant que l'on a pas atteint la fin
-        //de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
-        while(temp_ip != NULL && trouve == 0){
-            if(strcmp((ipToString(temp_ip->ip)), (ipToString(ip))) == 0){
-                trouve = 1;
-            }
-            else{
-				if(temp_ip->ip_suivant != NULL){
-					temp_pre_ip = temp_ip;
-                	temp_ip = temp_ip->ip_suivant;
-				}
-            }
-        }
-
-		//Si l'adresse IP à été trouvé pour ce hash
-		if(trouve == 1){
-			//Si l'ip précédent de l'ip actuel dans le tableau n'est pas null
-			//Ce n'est donc pas le premier objet de la liste
-			if(temp_pre_ip != NULL){
-				temp_pre_ip->ip_suivant = temp_ip->ip_suivant;
-				free(temp_ip);
-			}
-			//Si l'ip précédent est NULL, alors l'ip cherché est le premier de
-			//la liste
-			else{
-				//Si l'ip est le seul de la liste on supprime le hash
-				if(temp_ip->ip_suivant == NULL){
-				free(temp_ip);
-				trouve = 0;
-				table_hash* temp_pre_hash = NULL;
-				temp_hash = t->premier;
-				while(temp_hash != NULL && trouve == 0){
-					if(temp_hash->hash == hash){
-						trouve = 1;
-					}
-					else{
-						temp_pre_hash = temp_hash;
-						temp_hash = temp_hash->hash_suivant;
-					}
-				}
-
-				if(temp_pre_hash == NULL){
-					//SI c'est le seul de la liste
-					if(temp_hash->hash_suivant == NULL){
-						t->premier = NULL;
-						free(temp_hash);
-					}
-					else{
-						t->premier = temp_hash->hash_suivant;
-						free(temp_hash);
-					}
-				}
-				else{
-					temp_pre_hash->hash_suivant = temp_hash->hash_suivant;
-					free(temp_hash);
-				}
-			}
-			//Si l'ip n'est pas le seul de la liste
-			else{
-				temp_hash->t_ip = temp_ip->ip_suivant;
-				free(temp_ip);
-			}
-		}
-    }
-}
 /**
  * @brief Renvoie un tableau d'ip assicié à un hash
  *
@@ -336,11 +263,13 @@ struct in6_addr* get_ip(table* t, char* hash){
 	return table_ip6;
 	
 }
-
 void interpretationCmd(type_t cmd, 
 	struct sockaddr_in6 envoyeur,
 	char* msg, 
 	table *t){
+
+	int i;
+	info_message infMessage;
 
 	switch(cmd){
 		case PUT:
@@ -432,17 +361,6 @@ int main(int argc, char* argv[]){
 				printf("pere: On réécoute\n");
 				break;
 		}
-		/** Affichage */
-		/*printf("Message recu: %s\n",buf);
-	    printf("Longueur du message: %li\n",strlen(buf));
-
-	    char adr_ip[INET_ADDRSTRLEN];
-	    if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET_ADDRSTRLEN)==NULL){
-	        perror("inet_ntop\n");
-	        exit(EXIT_FAILURE);
-	    }
-	    printf("Ip source: %s\n",adr_ip);
-	    printf("Numero de port de l'expediteur: %d\n",client.sin6_port);*/
 	}
 	
 	/** Fermeture */
