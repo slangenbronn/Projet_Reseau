@@ -15,11 +15,13 @@
 #include <netdb.h>
 #include "communication.h"
 #include <netinet/in.h>
+#include <time.h>
 
 //Structure contenant un ip, et l'ip suivant, appartenant au même hash
 typedef struct table_ip table_ip;
 struct table_ip{
 	struct in6_addr ip;
+	time_t t_inser;
 	table_ip *ip_suivant;
 };
 
@@ -160,7 +162,7 @@ void insertion_DHT(table *t, struct in6_addr ip, char* hash){
 	//On créé le nouvel ip à inserer dans la liste
 	table_ip *nouveau_ip = malloc(sizeof(*nouveau_ip));
 	memcpy(nouveau_ip->ip.s6_addr, ip.s6_addr, sizeof(struct in6_addr));
-
+	time(&nouveau_ip->t_inser);
 	//On vérifie l'existence du hash demandé
 	table_hash *temp = existence_hash(t, hash);
 
@@ -284,6 +286,46 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
  	}
  }
 
+/**
+ * @brief Vérifie qu'une ip est encore valide ou non
+ *
+ * @param ip Un champs ip
+ *
+ * @return 1 si le timer n'est pas dépassé, 0 sinon
+ */
+int ip_valide(table_ip* ip){
+
+	time_t end;
+	time(&end);
+	if(difftime(end, ip->t_inser) >= 30){
+		return 0;
+	}
+	else{
+		return 1;
+	}
+}
+
+/**
+ * @brief Vérifie si les ip sont toujours valide ou non
+ *
+ * @param t Table contenant les hash et les ip associés
+ */
+void validite_ip(table* t){
+
+	table_hash* temp_h = t->premier;
+	table_ip* temp_ip = temp_h->t_ip;
+
+	while(temp_h != NULL){
+		while(temp_ip != NULL){
+			if(ip_valide(temp_ip) == 0){
+				supprimer_ip(t, temp_h->hash, temp_ip->ip);
+			}
+			temp_ip = temp_ip->ip_suivant;
+		}
+		temp_h = temp_h->hash_suivant;
+	}
+}
+
 
 /**
  * @brief Renvoie un tableau d'ip assicié à un hash
@@ -310,6 +352,42 @@ struct in6_addr* get_ip(table* t, char* hash){
 
 	return table_ip6;
 	
+}
+
+
+/**
+ * @brief Affiche tous les IPs et les hashs enregistrés dans la liste
+ */
+void affiche(table* t){
+	
+	table_hash* temp_h = t->premier;
+	table_ip* temp_ip = temp_h->t_ip;
+
+	while(temp_h != NULL){
+		printf("--- Hash : %s ---\n", temp_h->hash);
+		while(temp_ip != NULL){
+			printf("ip : %s\n", ipToString(temp_ip->ip));
+			temp_ip = temp_ip->ip_suivant;
+		}
+		temp_h = temp_h->hash_suivant;
+		if(temp_h != NULL){
+			temp_ip = temp_h->t_ip;
+		}
+		printf("\n");
+	}
+	
+}
+
+
+void test(){
+
+	table* t = init_DHT();
+	
+	insertion_DHT(t, recuperer_adresse("::1"), "15");
+	insertion_DHT(t, recuperer_adresse("::1"), "21");
+	insertion_DHT(t, recuperer_adresse("::1"), "15");
+	affiche(t);
+	printf("NB ip :%i\n", nombre_ip(t, "21"));
 }
 
 /**
@@ -411,9 +489,40 @@ int main(int argc, char* argv[]){
 
 	t = init_DHT();
 
+	test();
 	/** Initialisation */
 	socket = initSocketPort(port, ip);
 	
+
+	//** Lacement de la recherche de validité dans les données */
+	int descripteurTube[2];
+	char messageFinExecution[1] = "\0";
+	if(pipe(descripteurTube) != 0){
+		perror("Creation pipe");
+		exit(1);
+	}
+
+	switch(fork()){
+		case -1:
+			perror("fork validité");
+			exit(1);
+			break;
+		case 0:
+			/* Fils */
+			close(descripteurTube[1]);
+			read(descripteurTube[0], messageFinExecution, 1);
+			while(strcmp(messageFinExecution,"\0")==0){
+				sleep(30);
+				validite_ip(t);
+				read(descripteurTube[0], messageFinExecution, 1);
+			}
+			
+		default:
+			/* Père */
+			close(descripteurTube[0]);
+			break;
+	}
+
 	for (i = 0; i < nbMessage; ++i){
 		printf("Attente message %d\n", i);
 
