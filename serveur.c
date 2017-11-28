@@ -69,25 +69,25 @@ table *init_DHT(){
  */
 table_hash *existence_hash(table *t, char* hash){
 
-    int i = 0;
-    table_hash *temp = t->premier;
+	int i = 0;
+	table_hash *temp = t->premier;
 
-    //Si la liste est non vide
-    if(t->premier != NULL){
-        //On parcours toute la liste
-        while(i == 0 && temp != NULL){
-            //Jusqu'a trouver le hash voulu
-            if(temp->hash == hash){
-                i = 1;
-            }
-            else{
-                //Ou qu'on atteigne la fin de la liste
-                temp = temp->hash_suivant;
-            }
-        }
-    }
+	//Si la liste est non vide
+	if(t->premier != NULL){
+		//On parcours toute la liste
+		while(i == 0 && temp != NULL){
+			//Jusqu'a trouver le hash voulu
+			if(temp->hash == hash){
+				i = 1;
+			}
+			else{
+				//Ou qu'on atteigne la fin de la liste
+				temp = temp->hash_suivant;
+			}
+		}
+	}
 
-    return temp;
+	return temp;
 }
 
 /**
@@ -238,26 +238,26 @@ void supprimer_hash(table* t, char* hash){
 void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 
 	int trouve = 0;
-    table_hash* temp_hash = existence_hash(t, hash);
+	table_hash* temp_hash = existence_hash(t, hash);
 
-    //Si le hash à été trouvé dans la table
-    if(temp_hash != NULL){
-        //On cherche l'ip
-        table_ip* temp_ip = temp_hash->t_ip;
+	//Si le hash à été trouvé dans la table
+	if(temp_hash != NULL){
+		//On cherche l'ip
+		table_ip* temp_ip = temp_hash->t_ip;
 		table_ip* temp_pre_ip = NULL;
-        //On continue de chercher tant que l'on a pas atteint la fin
-        //de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
-        while(temp_ip != NULL && trouve == 0){
-            if(strcmp((ipToString(temp_ip->ip)), (ipToString(ip))) == 0){
-                trouve = 1;
-            }
-            else{
+		//On continue de chercher tant que l'on a pas atteint la fin
+		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
+		while(temp_ip != NULL && trouve == 0){
+			if(strcmp((ipToString(temp_ip->ip)), (ipToString(ip))) == 0){
+				trouve = 1;
+			}
+			else{
 				if(temp_ip->ip_suivant != NULL){
 					temp_pre_ip = temp_ip;
-                	temp_ip = temp_ip->ip_suivant;
+					temp_ip = temp_ip->ip_suivant;
 				}
-            }
-        }
+			}
+		}
 
  		//Si l'adresse IP à été trouvé pour ce hash
 		if(trouve == 1){
@@ -326,8 +326,8 @@ void interpretationCmd(type_t cmd,
 			infMessage = decryptageMsg(msg);
 			if (infMessage.taille != 0){
 				for (i = 0; i < infMessage.taille; ++i){
-	                insertion_DHT(t, infMessage.ips[i], infMessage.hash);
-	            }
+					insertion_DHT(t, infMessage.ips[i], infMessage.hash);
+				}
 			}
 			// Si il n'y a pas d'ip on ajoute l'ip  à envoyer
 			else{
