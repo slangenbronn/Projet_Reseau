@@ -138,6 +138,7 @@ int nombre_ip(table* t, char* hash){
 
 	int nb_ip = 0;
 	table_hash* temp_h = existence_hash(t, hash);
+	printf("%s\n", temp_h->hash);
 	if(temp_h != NULL){
 		table_ip* temp_ip = temp_h->t_ip;
 		while(temp_ip != NULL){
@@ -149,38 +150,6 @@ int nombre_ip(table* t, char* hash){
 	return nb_ip;
 }
 
-/**
- * @brief Vérifie l'existence ou non du couple hash-ip passé en paramètre
- *
- * @param t Liste contenant les hash et les ip
- * @param hash Valeur du hash que l'on veut trouver
- * @param ip Adresse ip d'on nous voulons savoir si elle est associé au hash
- *
- * @return 1 si le couple existe, 0 sinon
- */
-int existence_couple(table* t, char* hash, char* ip){
-
-	int trouve = 0;
-	table_hash* temp_hash = existence_hash(t, hash);
-
-	//Si le hash à été trouvé dans la table
-	if(temp_hash != NULL){
-		//On cherche l'ip
-		table_ip* temp_ip = temp_hash->t_ip;
-		//On continue de chercher tant que l'on a pas atteint la fin 
-		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
-		while(temp_ip != NULL && trouve == 0){
-			if(temp_ip->ip == ip){
-				trouve = 1;
-			}
-			else{
-				temp_ip = temp_ip->ip_suivant;
-			}
-		}
-	}
-
-	return trouve;
-}
 
 /**
  * @brief Insert dans la liste des hash et des ip associés un nouvel ip
@@ -396,17 +365,31 @@ void affiche(table* t){
 	table_ip* temp_ip = temp_h->t_ip;
 
 	while(temp_h != NULL){
-		printf("--- Hash : %s\n ---", temp_h->hash);
+		printf("--- Hash : %s ---\n", temp_h->hash);
 		while(temp_ip != NULL){
-			printf("ip : %s\n", temp_ip->ip.s6_addr);
+			printf("ip : %s\n", ipToString(temp_ip->ip));
 			temp_ip = temp_ip->ip_suivant;
 		}
 		temp_h = temp_h->hash_suivant;
+		if(temp_h != NULL){
+			temp_ip = temp_h->t_ip;
+		}
 		printf("\n");
 	}
 	
 }
 
+
+void test(){
+
+	table* t = init_DHT();
+
+	insertion_DHT(t, recuperer_adresse("::1"), "15");
+	insertion_DHT(t, recuperer_adresse("::1"), "21");
+	insertion_DHT(t, recuperer_adresse("::1"), "15");
+	affiche(t);
+	printf("NB ip :%i\n", nombre_ip(t, "21"));
+}
 
 void interpretationCmd(type_t cmd, 
 	struct sockaddr_in6 envoyeur,
@@ -473,10 +456,41 @@ int main(int argc, char* argv[]){
 
 	t = init_DHT();
 
+	test();
 	/** Initialisation */
 	socket = initSocket();
 	initReception(socket, port, ip);
 	
+
+	//** Lacement de la recherche de validité dans les données */
+	int descripteurTube[2];
+	char messageFinExecution[1] = "\0";
+	if(pipe(descripteurTube) != 0){
+		perror("Creation pipe");
+		exit(1);
+	}
+
+	switch(fork()){
+		case -1:
+			perror("fork validité");
+			exit(1);
+			break;
+		case 0:
+			/* Fils */
+			close(descripteurTube[1]);
+			read(descripteurTube[0], messageFinExecution, 1);
+			while(strcmp(messageFinExecution,"\0")==0){
+				sleep(30);
+				validite_ip(t);
+				read(descripteurTube[0], messageFinExecution, 1);
+			}
+			
+		default:
+			/* Père */
+			close(descripteurTube[0]);
+			break;
+	}
+
 	for (i = 0; i < nbMessage; ++i){
 		printf("Attente message %d\n", i);
 
