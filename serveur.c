@@ -17,6 +17,8 @@
 #include <netinet/in.h>
 #include <time.h>
 
+#define MAX_CONNEXION 10
+
 //Structure contenant un ip, et l'ip suivant, appartenant au même hash
 typedef struct table_ip table_ip;
 struct table_ip{
@@ -38,6 +40,11 @@ typedef struct table table;
 struct table{
 	table_hash *premier;
 };
+
+typedef struct adresse{
+	struct in6_addr ip;
+	int port;
+} adresse;
 
 /**
  * @brief Initialise une table contenant les hash les ip associés 
@@ -380,8 +387,6 @@ void affiche(table* t){
 
 
 void test(table *t){
-	struct in6_addr* tabIp;
-	int tailleTabIp;
 	
 	insertion_DHT(t, recuperer_adresse("::1"), "456");
 	insertion_DHT(t, recuperer_adresse("::1"), "21");
@@ -389,6 +394,11 @@ void test(table *t){
 	affiche(t);
 	printf("NB ip :%i\n", nombre_ip(t, "21"));
 }
+
+
+/*void connexionServeur(int socket, adresse *adr){
+	msgFormate = creationFormat(cmd, msg);
+}*/
 
 /**
  * @brief Interprete la commande
@@ -445,20 +455,21 @@ void interpretationCmd(type_t cmd,
 }
 
 int main(int argc, char* argv[]){
-	if(argc != 3){
-		printf("usage: %s <adresse> <port>\n", argv[0]);
+	if(argc != 3 || argc != 5){
+		printf("usage: %s <adresse> <port> [adresse port [...]]\n", argv[0]);
 		exit(1);
 	}
 
-	struct in6_addr ip;//IP de l'hote donnée en paramètre
+	struct in6_addr ip;
 	int port;
 	int nbMessage = 3;
 	int socket;
-	int i;
+	int i, j;
 	struct sockaddr_in6 client;
 	char buf[1024];
 	char *msg;
 	table *t;
+	adresse *carnetAdrServeur = malloc(sizeof(adresse));
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
@@ -473,6 +484,20 @@ int main(int argc, char* argv[]){
 		port = atoi(argv[2]);
 	}
 
+	// Si il y a des serveurs en option
+	if (argc > 3){
+		carnetAdrServeur->ip = recuperer_adresse(argv[3]);
+
+		if(verification_port(argv[4]) == 0){
+			fprintf(stderr, "Le numéro de port \'%s\' n'est pas \
+			un nombre\n", argv[4]);
+			exit(1);
+		}
+		else{
+			carnetAdrServeur->port = atoi(argv[4]);
+		}
+	}
+
 	t = init_DHT();
 
 	test(t);
@@ -480,6 +505,8 @@ int main(int argc, char* argv[]){
 
 	/** Initialisation */
 	socket = initSocketPort(port, ip);
+
+	/** Contacte les serveurs des options */
 
 	for (i = 0; i < nbMessage; ++i){
 		/** Reception Message */
@@ -493,6 +520,6 @@ int main(int argc, char* argv[]){
 	
 	/** Fermeture */
 	close(port);
-	
+	free(carnetAdrServeur);
 	return 0;
 }
