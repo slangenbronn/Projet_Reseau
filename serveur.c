@@ -272,24 +272,44 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 			else{
 				//Si l'ip est le seul de la liste on supprime le hash
 				if(temp_ip->ip_suivant == NULL){
-					supprimer_hash(t, hash);
+				free(temp_ip);
+				trouve = 0;
+				table_hash* temp_pre_hash = NULL;
+				temp_hash = t->premier;
+				while(temp_hash != NULL && trouve == 0){
+					if(temp_hash->hash == hash){
+						trouve = 1;
+					}
+					else{
+						temp_pre_hash = temp_hash;
+						temp_hash = temp_hash->hash_suivant;
+					}
 				}
-				//Si l'ip n'est pas le seul de la liste
+
+				if(temp_pre_hash == NULL){
+					//SI c'est le seul de la liste
+					if(temp_hash->hash_suivant == NULL){
+						t->premier = NULL;
+						free(temp_hash);
+					}
+					else{
+						t->premier = temp_hash->hash_suivant;
+						free(temp_hash);
+					}
+				}
 				else{
-					temp_hash->t_ip = temp_ip->ip_suivant;
-					free(temp_ip);
+					temp_pre_hash->hash_suivant = temp_hash->hash_suivant;
+					free(temp_hash);
 				}
 			}
+			//Si l'ip n'est pas le seul de la liste
+			else{
+				temp_hash->t_ip = temp_ip->ip_suivant;
+				free(temp_ip);
+			}
 		}
-	}
+    }
 }
-
-void interpretationCmd(type_t cmd, 
-	struct sockaddr_in6 envoyeur,
-	char* msg, 
-	table *t){
-
-
 /**
  * @brief Renvoie un tableau d'ip assicié à un hash
  *
@@ -315,6 +335,36 @@ struct in6_addr* get_ip(table* t, char* hash){
 
 	return table_ip6;
 	
+}
+
+void interpretationCmd(type_t cmd, 
+	struct sockaddr_in6 envoyeur,
+	char* msg, 
+	table *t){
+
+	switch(cmd){
+		case PUT:
+			printf("PUT\n");
+			printf("msg: %s\n", msg);
+			infMessage = decryptageMsg(msg);
+			if (infMessage.taille != 0){
+				for (i = 0; i < infMessage.taille; ++i){
+	                insertion_DHT(t, infMessage.ips[i], infMessage.hash);
+	            }
+			}
+			// Si il n'y a pas d'ip on ajoute l'ip  à envoyer
+			else{
+				insertion_DHT(t, envoyeur.sin6_addr, infMessage.hash);
+			}
+			break;
+		case GET:
+			break;
+		default:
+			fprintf(stderr, "commande inconnue\n");
+			printf("%s\n", ipToString(envoyeur.sin6_addr));
+			exit(1);
+	}
+	printf("fin cmd\n");	
 }
 
 int main(int argc, char* argv[]){
