@@ -70,14 +70,14 @@ void interpretationCmd(
             //Encapsuler msg
             msgFormate = creationFormat(cmd, msg);
             
+            // Initialise Socket
+            int socket = initSocketSansPort(in6addr_any);
+            
             // Envoyer msg
             envoieMsg(ipServeur, port, msgFormate);
 
             // Réception reponse
-            // Initialise l'écoute
-            int socket = initSocket();
-            initReception(socket, 3100, 
-                recuperer_adresse("::1"));
+            
 
             // Reçois la réponse
             buf = NULL;
@@ -93,6 +93,7 @@ void interpretationCmd(
             for (i = 0; i < infMessage.taille; ++i){
                 printf("\tip%d %s\n", i, ipToString(infMessage.ips[i]));
             }
+            closeSocket(socket);
             break;
         default:
             fprintf(stderr, "Type inconnue\n");

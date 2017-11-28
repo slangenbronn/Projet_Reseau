@@ -377,8 +377,7 @@ int main(int argc, char* argv[]){
 	t = init_DHT();
 
 	/** Initialisation */
-	socket = initSocket();
-	initReception(socket, port, ip);
+	socket = initSocketPort(port, ip);
 	
 	for (i = 0; i < nbMessage; ++i){
 		printf("Attente message %d\n", i);
