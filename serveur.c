@@ -235,30 +235,30 @@ void supprimer_hash(table* t, char* hash){
  * @param hash Valeur du hash que l'on veut trouver
  * @param ip Adresse ip que nous voulons supprimer
  */
- void supprimer_ip(table* t, char* hash, struct in6_addr ip){
- 
- 	int trouve = 0;
-     table_hash* temp_hash = existence_hash(t, hash);
- 
-     //Si le hash à été trouvé dans la table
-     if(temp_hash != NULL){
-         //On cherche l'ip
-         table_ip* temp_ip = temp_hash->t_ip;
- 		table_ip* temp_pre_ip = NULL;
-         //On continue de chercher tant que l'on a pas atteint la fin
-         //de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
-         while(temp_ip != NULL && trouve == 0){
-             if(strcmp((ipToString(temp_ip->ip)), (ipToString(ip))) == 0){
-                 trouve = 1;
-             }
-             else{
- 				if(temp_ip->ip_suivant != NULL){
- 					temp_pre_ip = temp_ip;
-                 	temp_ip = temp_ip->ip_suivant;
- 				}
-             }
-         }
- 
+void supprimer_ip(table* t, char* hash, struct in6_addr ip){
+
+	int trouve = 0;
+    table_hash* temp_hash = existence_hash(t, hash);
+
+    //Si le hash à été trouvé dans la table
+    if(temp_hash != NULL){
+        //On cherche l'ip
+        table_ip* temp_ip = temp_hash->t_ip;
+		table_ip* temp_pre_ip = NULL;
+        //On continue de chercher tant que l'on a pas atteint la fin
+        //de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
+        while(temp_ip != NULL && trouve == 0){
+            if(strcmp((ipToString(temp_ip->ip)), (ipToString(ip))) == 0){
+                trouve = 1;
+            }
+            else{
+				if(temp_ip->ip_suivant != NULL){
+					temp_pre_ip = temp_ip;
+                	temp_ip = temp_ip->ip_suivant;
+				}
+            }
+        }
+
  		//Si l'adresse IP à été trouvé pour ce hash
 		if(trouve == 1){
 			//Si l'ip précédent de l'ip actuel dans le tableau n'est pas null
