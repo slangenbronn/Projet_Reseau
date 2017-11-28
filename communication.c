@@ -1,3 +1,8 @@
+/**
+ * @file communication.c
+ * @author Florian GUILLEMEAU & Sylvain LANGENBRONN
+ */
+
 #include "communication.h"
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -10,6 +15,16 @@
 #include <netdb.h>
 #include <string.h>
 
+/** --Fonction de vérification du hash-- */
+/**
+ * @brief Vérification de la validité du hash
+ * @param hash hash à vérifier
+ * @return 1 si correct sinon 0
+ */
+int verificationHash(char* hash){
+    int taille = strlen(hash);
+    return taille >= TAILLE_HASH_MIN && taille < TAILLE_HASH_MAX;
+}
 
 /** --Ouverture socket-- */
 /**
@@ -107,8 +122,8 @@ void recevoirMsg(int port){
     printf("Message recu: %s\n",buf);
     printf("Longueur du message: %li\n",strlen(buf));
 
-    char adr_ip[INET_ADDRSTRLEN];
-    if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET_ADDRSTRLEN)==NULL){
+    char adr_ip[INET6_ADDRSTRLEN];
+    if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET6_ADDRSTRLEN)==NULL){
         perror("inet_ntop\n");
         exit(EXIT_FAILURE);
     }
@@ -153,6 +168,211 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
 
     // close the socket
     close(sockfd);
+}
+
+/** --Format de données-- */
+
+/**
+ * @brief Renvoie le type associé à la string
+ * @param string chaine du type
+ * @return type associé
+ */
+type_t getTypeFromString(char* string){
+    if (strcmp(string, "put") == 0){
+        return PUT;
+    }
+    else if (strcmp(string, "get") == 0){
+        return GET;
+    }
+    else{
+        fprintf(stderr, "type inconnue: %s\n", string);
+        exit(1);
+    }
+}
+
+/**
+ * @brief Crée une chaine dans le format de données
+ * @param type type de message
+ * @param message message à envoyer
+ * @return message encapsulé dans le format
+ */
+char* creationFormat(type_t type, char* message){
+    char* buf;
+    short tailleMsg = strlen(message);
+    char ty[1];
+    char tai[2];
+    short taille; 
+    int index = 0;
+
+    if (tailleMsg > TAILLE_MSG_MAX){
+        fprintf(stderr, "taille du message trop grand\n");
+        exit(1);
+    }
+
+    taille = sizeof(type_t) + sizeof(short) + tailleMsg;
+    buf = malloc(taille);
+
+    ty[0] = type;
+    tai[0] = ~taille;
+    tai[1] = (~taille)>>8;
+    memset(buf, '\0', taille);
+
+    // Insertion du type
+    strncpy(buf + index, ty, 1);
+    index += 1;
+
+    // Insertion de la taille
+    buf[index] = tai[0];
+    buf[index+1] = tai[1];
+    index += sizeof(short);
+
+    // Insertion du message
+    strncat(buf+index, message, tailleMsg);
+
+    return buf;
+}
+
+/**
+ * @brief Retourne le type contenue dans le format
+ * @param format format à decrypter
+ * @return type dans le format
+ */
+type_t getTypeFromFormat(char* format){
+    return (type_t)format[0];
+}
+
+/**
+ * Renvoie la taille contenue dans le format
+ * @param format format à décrypter
+ * @return taille
+ */
+short getTailleFromFormat(char* format){
+    short taille;
+    
+    taille = ((~format[2])<<8) + ~format[1];
+    
+    return taille;
+}
+
+/**
+ * Renvoie le message contenue dans le format
+ * @param format format à décrypter
+ * @return message
+ */
+char* getMsgFromFormat(short taille, char* format){
+    char* message = malloc(sizeof(char)*taille);
+
+    strcpy(message, format+sizeof(type_t)+sizeof(short));
+
+    return message;
+}
+
+/** -- Création du message-- */
+/**
+ * @brief Crée le message à envoyer.
+ * @param hash hash à envoyer
+ * @param ips tableau d'ips à envoyer
+ * @param taille taille du tableau d'ips
+ * @return concaténation des différents éléments séparer par un séparateur
+ */
+char* creationMsg(char* hash, struct in6_addr* ips, int taille){
+    char* msg;
+    char tSep[1];
+    char ipstr[INET6_ADDRSTRLEN];
+    int tailleMsg, tailleHash;
+    int i;
+
+    // Calcule de la taille du message
+    tailleHash = strlen(hash);
+    tailleMsg = tailleHash + INET6_ADDRSTRLEN*taille + taille;
+    msg = malloc(tailleMsg);
+
+    // Copies le hash
+    strncpy(msg, hash, tailleHash);
+
+    if (taille > 0)
+    {
+        tSep[0] = SEPARATEUR_HASH_IP;
+        strncat(msg, tSep, 1);
+        tSep[0] = SEPARATEUR_IPS;
+
+        //Copies les ips
+        for (i = 0; i < taille; i++){
+            // Conversion de l'adresse IP en une chaîne de caractères
+            inet_ntop(AF_INET6, (void*)&(ips[i]), ipstr, sizeof(ipstr));
+            
+            // Concatene la chaine
+            strncat(msg, ipstr, sizeof(ipstr));
+           
+            if (i < taille-1){
+                strncat(msg, tSep, 1);
+            }
+        }
+    }
+    
+    return msg;
+}
+
+/**
+ * Décrypte le message
+ * @param msg message à décrypter
+ * @return les info contenus dans le message
+ */
+info_message decryptageMsg(char* msg){
+    char *tmpHash, *tmpIp;
+    char delim[1];;
+    char tabIp[100][INET6_ADDRSTRLEN];
+    int i;
+    info_message infMsg;
+
+    // Récupération du hash
+    delim[0] = SEPARATEUR_HASH_IP;
+    tmpHash = strtok(msg, delim);
+    infMsg.hash = malloc(strlen(tmpHash));
+    strncpy(infMsg.hash, tmpHash, strlen(tmpHash));
+
+    
+    // Prépare le reste de la chaine pour le traitement
+    tmpHash =  strtok(NULL, delim);
+    i = 0;
+    if (tmpHash != NULL){
+        delim[0] = SEPARATEUR_IPS;
+        tmpIp =  strtok(tmpHash, delim);
+        
+        // Récupération des ips
+        if (tmpIp != NULL){
+            strncpy(tabIp[i], tmpIp, INET6_ADDRSTRLEN);
+            i++;
+        }
+        while((tmpIp = strtok(NULL, delim)) != NULL){
+            strncpy(tabIp[i], tmpIp, INET6_ADDRSTRLEN);
+            i++;
+        }
+    }
+    
+    infMsg.taille = i;
+
+    // Convertie en type ip
+    int j;
+    infMsg.ips = malloc(sizeof(struct in6_addr)*infMsg.taille);
+    for (j = 0; j < infMsg.taille; ++j){
+        infMsg.ips[j] = recuperer_adresse(tabIp[j]);   
+    }
+
+    return infMsg;
+}
+
+
+/** --Fonction Utile-- */
+/**
+ * @brief Transforme une adresse ip en string
+ * @param ip ip à transformer
+ * @return ip en string
+ */
+char* ipToString(struct in6_addr ip){
+    char* ipstr = malloc(INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6, (void*)&(ip), ipstr, sizeof(ipstr));
+    return ipstr;
 }
 
 /**

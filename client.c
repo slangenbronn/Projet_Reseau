@@ -1,27 +1,8 @@
 /**
- * @file sender-udp.c
- * @author Julien Montavont
- * @version 1.0
+ * @file client.c
+ * @author Florian GUILLEMEAU & Sylvain LANGENBRONN
  *
- * @section LICENSE
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details at
- * http://www.gnu.org/copyleft/gpl.html
- *
- * @section DESCRIPTION
- *
- * Simple program that creates an IPv4 UDP socket and sends a string
- * to a remote host. The string, IPv4 addr and port number of the
- * remote host are passed as command line parameters as follow:
- * ./pg_name IPv4_addr port_number string
+ * ./pg_name IP PORT COMMANDE HASH [IP]
  */
 
 #include "communication.h"
@@ -34,20 +15,105 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-int main(int argc, char **argv)
-{
-	int port_nb;	
-    struct in6_addr ip;
+
+
+
+/**
+ * @brief Réalise les actions associées à la commdande
+ * @param cmd commande à réalisé
+ * @param ipServeur ip du serveur à contacter
+ * @param port port du serveur à contacter
+ * @param hash hash à transmettre ou demander
+ * @param ipAssocie ip associé au hash
+ */
+void interpretationCmd(
+    type_t cmd, 
+    struct in6_addr ipServeur,
+    int port,
+    char *hash,
+    struct in6_addr *ipAssocie){
+
+    char *msg, *msgFormate;
+    char *buf;
+    int i;
+    switch(cmd){
+        case PUT:
+            // Faire format msg
+            // Si ipAssocié est null
+            if (ipAssocie != NULL){
+                printf("ipAssocie non null\n");
+                msg = creationMsg(hash, ipAssocie, 1);
+            }
+            // Si ipAssocié n'est pas null
+            else{
+                //msg = hash;
+                printf("ipAssocie null\n");
+                msg = creationMsg(hash, NULL, 0);
+            }
+            // Encapsuler message
+            msgFormate = creationFormat(cmd, msg);
+            //printf("msg format: %s\n", msgFormate);
+            
+
+            int tailleMsg = getTailleFromFormat(msgFormate);
+            printf("taille %d\n", tailleMsg);
+            printf("msg: %s\n", getMsgFromFormat(tailleMsg, msgFormate));
+            // Envoyer msg
+            envoieMsg(ipServeur, port, msgFormate);
+            printf("fin put\n");
+
+            break;
+        case GET:
+            // Faire msg
+            msg = creationMsg(hash, NULL, 0);
+
+            //Encapsuler msg
+            msgFormate = creationFormat(cmd, msg);
+            
+            // Envoyer msg
+            envoieMsg(ipServeur, port, msgFormate);
+
+            // Réception reponse
+            // Initialise l'écoute
+            int socket = initSocket();
+            initReception(socket, 3100, 
+                recuperer_adresse("::1"));
+
+            // Reçois la réponse
+            buf = NULL;
+            recevoir(socket, buf); // A changer
+
+            // Afficher reponse
+            msg = getMsgFromFormat(
+                getTailleFromFormat(buf), 
+                buf);
+            info_message infMessage = decryptageMsg(msg);
+
+            printf("hash: %s\n", infMessage.hash);
+            for (i = 0; i < infMessage.taille; ++i){
+                printf("\tip%d %s\n", i, ipToString(infMessage.ips[i]));
+            }
+            break;
+        default:
+            fprintf(stderr, "Type inconnue\n");
+            exit(1);
+    }
+}
+
+int main(int argc, char **argv){
+
+    int port_nb;    
+    struct in6_addr ipServeur, ipTmp, *ipAssocie = NULL;
+    type_t cmd;
 
     // check the number of args on command line
-    if(argc != 4)
-    {
-        printf("USAGE: %s @dest port_num string\n", argv[0]);
+    if(argc < 5 ||   argc > 6){
+        printf("USAGE: %s IP PORT COMMANDE HASH [IP]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
     // get addr from command line and convert it
-    ip = recuperer_adresse(argv[1]);
+    ipServeur = recuperer_adresse(argv[1]);
     //Si == 0 alors le port n'est pas un nombre, sinon s'en est un
     if(verification_port(argv[2]) == 0){
         fprintf(stderr, "Le numéro de port \'%s\' n'est pas \
@@ -57,8 +123,22 @@ int main(int argc, char **argv)
     else{
         port_nb = atoi(argv[2]);
     }
-	
-    envoieMsg(ip, port_nb, argv[3]);
+
+    // Vérification de la commande
+    cmd = getTypeFromString(argv[3]);
+
+    // Vérification du hash
+    if (verificationHash(argv[4]) == 0){
+        fprintf(stderr, "hash incorrecte\n");
+        exit(1);
+    }
+    // Vérification de l'ip en option
+    if (argc >= 6){
+        ipTmp = recuperer_adresse(argv[5]);
+        ipAssocie = &ipTmp;
+    }
+    
+    interpretationCmd(cmd, ipServeur, port_nb, argv[4], ipAssocie);
     
     return 0;
 }
