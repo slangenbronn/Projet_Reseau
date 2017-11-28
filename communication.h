@@ -37,7 +37,6 @@ int verificationHash(char* hash);
 /** --Ouverture socket-- */
 int initSocketPort(int port, struct in6_addr ip);
 int initSocketSansPort(struct in6_addr ip);
-void closeSocket(int sockfd);
 
 /** --Fonction de reception-- */
 struct sockaddr_in6 recevoir(int sockfd, char* buf);

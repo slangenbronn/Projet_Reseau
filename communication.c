@@ -99,14 +99,6 @@ int initSocketSansPort(struct in6_addr ip){
     return sockfd;
 }
 
-/**
- * @brief Ferme le socket ouvert
- * @param sockfd socket à fermer
- */
-void closeSocket(int sockfd){
-    close(sockfd);
-}
-
 /** --Fonction de reception-- */
 /**
  * @brief Bind le socket pour la reception
@@ -184,7 +176,7 @@ void recevoirMsg(int port){
     printf("Ip source: %s\n",adr_ip);
     printf("Numero de port de l'expediteur: %d\n",client.sin6_port);
 
-    closeSocket(sockfd);
+    close(sockfd);
 }
 
 /** --Fonction d'envoie-- */
@@ -242,7 +234,7 @@ void envoie(int sockfd, struct in6_addr ip, int port, char* msg){
     }
 
     // close the socket
-    close(sockfd);
+    //close(sockfd);
 }
 
 /** --Format de données-- */

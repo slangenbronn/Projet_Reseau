@@ -311,19 +311,36 @@ struct in6_addr* get_ip(table* t, char* hash){
 	return table_ip6;
 	
 }
+
+/**
+ * @brief Interprete la commande
+ * @param cmd commande à interpréter
+ * @param envoyeur info de l'envoyeur
+ * @param msg message reçus
+ * @param t table de hash 
+ */
 void interpretationCmd(type_t cmd, 
 	struct sockaddr_in6 envoyeur,
 	char* msg, 
 	table *t){
 
-	int i;
+	int i, tailleTabIp;
 	info_message infMessage;
+	struct in6_addr* tabIp;
+	char* msgFormat;
 
 	switch(cmd){
 		case PUT:
 			printf("PUT\n");
 			printf("msg: %s\n", msg);
 			infMessage = decryptageMsg(msg);
+
+			
+			printf("hash: %s\n", infMessage.hash);
+            for (i = 0; i < infMessage.taille; ++i){
+                printf("\tip%d %s\n", i, ipToString(infMessage.ips[i]));
+            }
+
 			if (infMessage.taille != 0){
 				for (i = 0; i < infMessage.taille; ++i){
 					insertion_DHT(t, infMessage.ips[i], infMessage.hash);
@@ -333,8 +350,26 @@ void interpretationCmd(type_t cmd,
 			else{
 				insertion_DHT(t, envoyeur.sin6_addr, infMessage.hash);
 			}
+			// Affiche le tableau du hash
+
 			break;
 		case GET:
+			printf("GET\n");
+			infMessage = decryptageMsg(msg);
+			free(msg);
+			// On récupère le tableau d'ip associé
+			tailleTabIp = nombre_ip(t, infMessage.hash);
+			tabIp = get_ip(t, infMessage.hash);
+
+			// On initialise le message
+			msg = creationMsg(infMessage.hash, tabIp, tailleTabIp);
+			msgFormat = creationFormat(PUT, msg);
+
+			// Envoie du msg
+			printf("Envoie message\n");
+			envoieMsg(envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			printf("\tmessage envoyé\n");
+
 			break;
 		default:
 			fprintf(stderr, "commande inconnue\n");
@@ -411,7 +446,7 @@ int main(int argc, char* argv[]){
 	}
 	
 	/** Fermeture */
-	closeSocket(port);
+	close(port);
 	
 	return 0;
 }
