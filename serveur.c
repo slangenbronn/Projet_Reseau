@@ -15,11 +15,13 @@
 #include <netdb.h>
 #include "communication.h"
 #include <netinet/in.h>
+#include <time.h>
 
 //Structure contenant un ip, et l'ip suivant, appartenant au même hash
 typedef struct table_ip table_ip;
 struct table_ip{
 	struct in6_addr ip;
+	time_t t_inser;
 	table_ip *ip_suivant;
 };
 
@@ -160,7 +162,7 @@ void insertion_DHT(table *t, struct in6_addr ip, char* hash){
 	//On créé le nouvel ip à inserer dans la liste
 	table_ip *nouveau_ip = malloc(sizeof(*nouveau_ip));
 	memcpy(nouveau_ip->ip.s6_addr, ip.s6_addr, sizeof(struct in6_addr));
-
+	time(&nouveau_ip->t_inser);
 	//On vérifie l'existence du hash demandé
 	table_hash *temp = existence_hash(t, hash);
 
@@ -247,7 +249,7 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 		table_ip* temp_pre_ip = NULL;
         //On continue de chercher tant que l'on a pas atteint la fin
         //de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
-        while(temp_ip != NULL && trouve == 0){
+		while(temp_ip != NULL && trouve == 0){
             if(strcmp((ipToString(temp_ip->ip)), (ipToString(ip))) == 0){
                 trouve = 1;
             }
@@ -284,6 +286,24 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
  	}
  }
 
+/**
+ * @brief Vérifie qu'une ip est encore valide ou non
+ *
+ * @param ip Un champs ip
+ *
+ * @return 1 si le timer n'est pas dépassé, 0 sinon
+ */
+int ip_valide(table_ip ip){
+
+	time_t end;
+	time(&end);
+	if(difftime(end, ip.t_inser) >= 30){
+		return 0;
+	}
+	else{
+		return 1;
+	}
+}
 
 /**
  * @brief Renvoie un tableau d'ip assicié à un hash
@@ -311,6 +331,29 @@ struct in6_addr* get_ip(table* t, char* hash){
 	return table_ip6;
 	
 }
+
+
+/**
+ * @brief Affiche tous les IPs et les hashs enregistrés dans la liste
+ */
+void affiche(table* t){
+	
+	table_hash* temp_h = t->premier;
+	table_ip* temp_ip = temp_h->t_ip;
+
+	while(temp_h != NULL){
+		printf("--- Hash : %s\n ---", temp_h->hash);
+		while(temp_ip != NULL){
+			printf("ip : %s\n", temp_ip->ip.s6_addr);
+			temp_ip = temp_ip->ip_suivant;
+		}
+		temp_h = temp_h->hash_suivant;
+		printf("\n");
+	}
+	
+}
+
+
 void interpretationCmd(type_t cmd, 
 	struct sockaddr_in6 envoyeur,
 	char* msg, 
