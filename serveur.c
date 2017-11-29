@@ -395,6 +395,66 @@ void test(table *t){
 	printf("NB ip :%i\n", nombre_ip(t, "21"));
 }
 
+/**
+ * @brief Envoie toute sa table de hash 
+ * lors d'une premiere connexion avec un autre serveur
+ * @param socket socket d'envoie
+ * @param adresse du serveur
+ * @param t table de hash
+ */
+void envoieTableHash(int socket, adresse *adrServeur, table *t){
+	int tailleTabIp=0;
+	struct in6_addr* tabIp;
+	table_hash *temp;
+	char *msg, *msgFormat;
+
+	for (temp = t->premier; temp != NULL; temp = temp->hash_suivant){
+		tailleTabIp = nombre_ip(t, temp->hash);
+		tabIp = get_ip(t, temp->hash);
+
+		printf("hash %s\n", temp->hash);
+		// On initialise le message
+		msg = creationMsg(temp->hash, tabIp, tailleTabIp);
+		msgFormat = creationFormat(PUT, msg);
+
+		// Envoie du msg
+		envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+		free(msgFormat);
+	}
+
+	// Envoie de message fin de transmission table
+	printf("Fin transmission table\n");
+	msgFormat = creationFormat(FIN_TRANSMISSION_TABLE, NULL);
+	// Envoie du msg
+	envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+
+	//Si la liste est non vide
+	/*if(t->premier != NULL){
+		//On parcours toute la liste
+		while(i == 0 && temp != NULL){
+			//Jusqu'a trouver le hash voulu
+			if(strcmp(temp->hash, hash)==0){
+				i = 1;
+			}
+			else{
+				//Ou qu'on atteigne la fin de la liste
+				temp = temp->hash_suivant;
+			}
+		}
+	}*/
+	/*
+	tailleTabIp = nombre_ip(t, infMessage.hash);
+	tabIp = get_ip(t, infMessage.hash);
+
+	// On initialise le message
+	msg = creationMsg(..., tabIp, tailleTabIp);
+	msgFormat = creationFormat(PUT, msg);
+
+	// Envoie du msg
+	envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);*/
+
+
+}
 
 /**
  * @brief établie une connexion avec le serveur
@@ -427,6 +487,10 @@ int connexionServeur(int socket, adresse *adr){
 
 	// Regarde si la connexion est accepté
 	type = getTypeFromFormat(buf);
+	if (type == ACCEPTE_CONNECT)
+	{
+		printf("On reçois des trucs\n");
+	}
 
 	return type == ACCEPTE_CONNECT;
 }
@@ -461,22 +525,14 @@ void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur,
 	char* msgFormat;
 
 	if (adrServeur != NULL){
-		// Vérifie si l'envoyeur n'est pas le serveur auquelle on est connecté
+		// Vérifie si l'envoyeur n'est pas le serveur auquel on est connecté
 		if (strcmp(ipToString2(adrString1, adrServeur->ip), 
 				ipToString2(adrString2, envoyeur.sin6_addr)) !=0 
 				|| envoyeur.sin6_port != adrServeur->port){
-			printf("pas le meme serveur\n");
-
 			msgFormat = creationFormat(PUT, msg);
 			envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
 			free(msgFormat);
 		}
-		else{
-			printf("le meme\n");
-		}
-	}
-	else{
-		printf("pas de serveur\n");
 	}
 }
 
@@ -547,6 +603,12 @@ adresse* interpretationCmd(
 				carnetAdrServeur = malloc(sizeof(adresse));
 				carnetAdrServeur->ip = envoyeur.sin6_addr;
 				carnetAdrServeur->port = envoyeur.sin6_port;
+
+				// Envoie du msg
+				envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+
+				// On envoie notre table
+				envoieTableHash(socket, carnetAdrServeur, t);
 			}
 			// On ne peut pas accepter le servur
 			else{
@@ -558,15 +620,21 @@ adresse* interpretationCmd(
 					printf("Meme serveur\n");
 					// On envoie qu'on accepte la connexion
 					msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
+
+					// Envoie du msg
+					envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+
+					// On envoie notre table
+					envoieTableHash(socket, carnetAdrServeur, t);
 				}
 				else{
 					printf("DENIED_CONNECT\n");
 					msgFormat = creationFormat(DENIED_CONNECT, NULL);
+
+					// Envoie du msg
+				envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 				}
-			}
-			
-			// Envoie du msg
-			envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			}			
 			break;
 		case DISCONNECT:
 			printf("DISCONNECT\n");
@@ -581,6 +649,9 @@ adresse* interpretationCmd(
 			break;
 		case ACCEPTE_CONNECT:
 			/* Ignorer */
+			break;
+		case FIN_TRANSMISSION_TABLE:
+			/* rien à faire */
 			break;
 		default:
 			fprintf(stderr, "commande inconnue\n");
@@ -649,6 +720,9 @@ int main(int argc, char* argv[]){
 		else{
 			printf("connexion etablie\n");
 		}
+	}
+	else{
+		test(t); // Test
 	}
 
 	for (i = 0; i < nbMessage; ++i){
