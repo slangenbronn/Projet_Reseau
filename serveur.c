@@ -5,21 +5,12 @@
  * ./pg_name IPv4_addr port_number
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netdb.h>
 #include "communication.h"
-#include <netinet/in.h>
-#include <time.h>
 
 #define MAX_CONNEXION 10
 
-//Structure contenant un ip, et l'ip suivant, appartenant au même hash
+//Structure contenant un ip, l'heure de l'insertion dans la table des hash
+//et l'ip suivant, appartenant au même hash
 typedef struct table_ip table_ip;
 struct table_ip{
 	struct in6_addr ip;
@@ -112,8 +103,10 @@ int existence_couple(table* t, char* hash, struct in6_addr ip){
 
 	int trouve = 0;
 	table_hash* temp_hash = existence_hash(t, hash);
+	//Pour enregister l'ip en chaine
 	char ipstr[INET6_ADDRSTRLEN];
 	ipToString(ip, ipstr);
+	//Pour enregistrer les ip de la table en chaine
 	char tempstr[INET6_ADDRSTRLEN];
 
 	//Si le hash à été trouvé dans la table
@@ -124,6 +117,8 @@ int existence_couple(table* t, char* hash, struct in6_addr ip){
 		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
 		while(temp_ip != NULL && trouve == 0){
 			ipToString(temp_ip->ip, tempstr);
+			//Comparaison de l'ip donnée en paramètre de la fonction
+			//Et les ip trouvés dans la table
 			if(strcmp(tempstr, ipstr)==0){ 
 				trouve = 1;
 			}
@@ -151,6 +146,7 @@ int nombre_ip(table* t, char* hash){
 	table_hash* temp_h = existence_hash(t, hash);
 	if(temp_h != NULL){
 		table_ip* temp_ip = temp_h->t_ip;
+		//Parcours de la liste des ip
 		while(temp_ip != NULL){
 			nb_ip++;
 			temp_ip = temp_ip->ip_suivant;
@@ -171,14 +167,18 @@ int nombre_ip(table* t, char* hash){
 void reset_timer(table* t, char* hash, struct in6_addr ip){
 	
 	table_hash* temp_h = existence_hash(t, hash);
+	//Pour enregistrer l'ip en chaine
 	char ipstr[INET6_ADDRSTRLEN];
 	ipToString(ip, ipstr);
+	//Pour enregistrer les ip trouvé dans la liste en chaine
 	char tempstr[INET6_ADDRSTRLEN];
 
 	if(temp_h != NULL){
 		table_ip* temp_ip = temp_h->t_ip;
 		while(temp_ip != NULL){
 			ipToString(ip, tempstr);
+			//Comparaison de l'ip passé en paramètre de la fonction
+			//et des ip trouvés dans la liste
 			if(strcmp(ipstr, tempstr) == 0){
 				time(&temp_ip->t_inser);
 				temp_ip = NULL;
@@ -224,6 +224,7 @@ void insertion_DHT(table *t, struct in6_addr ip, char* hash){
 	else{
 		//Si l'ip est déjà enregistré dans la table de hash
 		if(existence_couple(t, hash, ip) == 1){
+			//On remet son conteur de temps à 0
 			reset_timer(t, hash, ip);
 		}
 		else{
@@ -289,6 +290,12 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 	int trouve = 0;
 	table_hash* temp_hash = existence_hash(t, hash);
 
+	//On enregistre l'ip en chaine
+	char ipstr[INET6_ADDRSTRLEN];
+	ipToString(ip, ipstr);
+	//Pour enregistrer les ip trouvés dans la liste en chaine
+	char tempstr[INET6_ADDRSTRLEN];
+
 	//Si le hash à été trouvé dans la table
 	if(temp_hash != NULL){
 		//On cherche l'ip
@@ -297,11 +304,10 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 		//On continue de chercher tant que l'on a pas atteint la fin
 		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
 		while(temp_ip != NULL && trouve == 0){
-			char ipstr1[INET6_ADDRSTRLEN];
-			char ipstr2[INET6_ADDRSTRLEN];
-			ipToString(temp_ip->ip, ipstr1);
-			ipToString(ip, ipstr2);
-			if(strcmp(ipstr1, ipstr2) == 0){
+			ipToString(temp_ip->ip, tempstr);
+			//Comparaison de l'ip passé en paramètre
+			//et les ip de la liste
+			if(strcmp(ipstr, tempstr) == 0){
 				trouve = 1;
 			}
 			else{
@@ -371,7 +377,9 @@ void nettoyage_ip(table* t, char* hash){
 
 	if(temp_h != NULL){
 		while(temp_ip != NULL){
+			//On vérifie que les ip ne sont pas obsolètes
 			if(ip_valide(temp_ip) == 0){
+				//On les supprime si elle le sont
 				supprimer_ip(t, temp_h->hash, temp_ip->ip);
 			}
 			temp_ip = temp_ip->ip_suivant;
@@ -391,16 +399,18 @@ struct in6_addr* get_ip(table* t, char* hash){
 
 	table_hash* temp_h = existence_hash(t, hash);
 	struct in6_addr* table_ip6;
+	//On supprime les ip du hash qui sont obsolètes
 	nettoyage_ip(t, hash);
 	if(temp_h != NULL){
+		//On calcul le nombre de d'ip pour ce hash
 		int taille = nombre_ip(t, hash);
-		int i = 0;
+		int i;
 		table_ip6 = malloc(sizeof(struct in6_addr)*taille);
+		//Puis on enregistre toutes les ip associès à ce hash dans une table
 		table_ip* temp_ip = temp_h->t_ip;
-		while(temp_ip != NULL){
+		for(i = 0; i < taille; i++){
 			table_ip6[i] = temp_ip->ip;
 			temp_ip = temp_ip->ip_suivant;
-			i++;
 		}
 	}
 
@@ -416,16 +426,20 @@ void affiche(table* t){
 	
 	table_hash* temp_h = t->premier;
 	table_ip* temp_ip = temp_h->t_ip;
+	char ipstr[INET6_ADDRSTRLEN];
 
 	while(temp_h != NULL){
+		//Quand on rencontre un nouveau hash on l'affiche
 		printf("--- Hash : %s ---\n", temp_h->hash);
+		//Et on affiche toutes ces ip
 		while(temp_ip != NULL){
-			char ipstr[INET6_ADDRSTRLEN];
 			ipToString(temp_ip->ip, ipstr);
 			printf("ip : %s\n", ipstr);
 			temp_ip = temp_ip->ip_suivant;
 		}
 		temp_h = temp_h->hash_suivant;
+		//Si nous n'avons pas atteint la fin de la liste des hash
+		//On passe à la table d'ip du hash suivant
 		if(temp_h != NULL){
 			temp_ip = temp_h->t_ip;
 		}
