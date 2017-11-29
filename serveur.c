@@ -432,6 +432,22 @@ int connexionServeur(int socket, adresse *adr){
 }
 
 /**
+ * @brief déconnexion d'un serveur
+ * @param socket d'envoie
+ * @param adrServeur adresseur du serveur connecté
+ */
+void deconnexionServeur(int socket, adresse* adrServeur){
+	char* msgFormate;
+	if(adrServeur != NULL){
+		msgFormate = creationFormat(DISCONNECT, NULL);
+
+		// Envoie le message de connexion
+		envoie(socket, adrServeur->ip, adrServeur->port, msgFormate);
+		free(msgFormate);
+	}
+}
+
+/**
  * @brief Interprete la commande
  * @param cmd commande à interpréter
  * @param envoyeur info de l'envoyeur
@@ -512,6 +528,20 @@ adresse* interpretationCmd(type_t cmd,
 			// Envoie du msg
 			envoieMsg(envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 			break;
+		case DISCONNECT:
+			printf("DISCONNECT\n");
+			if (strcmp(ipToString2(adrString1, carnetAdrServeur->ip), 
+					ipToString2(adrString2, envoyeur.sin6_addr)) ==0 
+				&& envoyeur.sin6_port == carnetAdrServeur->port){
+				printf("Meme serveur\n");
+				// On envoie qu'on accepte la connexion
+				free(carnetAdrServeur);
+				carnetAdrServeur = NULL;
+			}
+			break;
+		case ACCEPTE_CONNECT:
+			/* Ignorer */
+			break;
 		default:
 			fprintf(stderr, "commande inconnue\n");
 			printf("%s\n", ipToString(envoyeur.sin6_addr));
@@ -522,12 +552,12 @@ adresse* interpretationCmd(type_t cmd,
 
 /*void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur, 
 	adresse adrServeur, char* msg){
-	char adrString[INET6_ADDRSTRLEN];
+	char adrString1[INET6_ADDRSTRLEN], adrString2[INET6_ADDRSTRLEN];
 
 	if (adrServeur != NULL){
 		// Vérifie si l'envoyeur n'est pas le serveur auquelle on est connecté
-		if (strcmp(ipToString2(adrString, adr->ip), 
-				ipToString(envoyeur.sin6_addr)) !=0 
+		if (strcmp(ipToString2(adrString1, adr->ip), 
+				ipToString2(adrString2, envoyeur.sin6_addr)) !=0 
 				&& envoyeur.sin6_port != adrServeur->port){
 			printf("pas le meme serveur\n");
 		}
@@ -541,12 +571,6 @@ adresse* interpretationCmd(type_t cmd,
 }*/
 
 int main(int argc, char* argv[]){
-	/*char adrString1[INET6_ADDRSTRLEN], adrString2[INET6_ADDRSTRLEN];
-	printf("ip1 %s\n", ipToString2(adrString1, 
-		recuperer_adresse("::1")));
-	printf("ip2 %s\n", ipToString2(adrString2, 
-		recuperer_adresse("::2")));
-	return 0;*/
 	if(argc != 3 && argc != 5){
 		printf("usage: %s <adresse> <port> [adresse port [...]]\n", argv[0]);
 		exit(1);
@@ -593,7 +617,7 @@ int main(int argc, char* argv[]){
 
 	t = init_DHT();
 
-	test(t);
+	//test(t);
 
 	/** Initialisation */
 	socket = initSocketPort(port, ip);
@@ -605,15 +629,7 @@ int main(int argc, char* argv[]){
 			//carnetAdrServeur = NULL;
 		}
 		else{
-			printf("connexion etablie\n");	
-		}
-
-		if (!connexionServeur(socket, carnetAdrServeur)){
-			free(carnetAdrServeur);
-			//carnetAdrServeur = NULL;
-		}
-		else{
-			printf("connexion etablie\n");	
+			printf("connexion etablie\n");
 		}
 	}
 
@@ -627,7 +643,10 @@ int main(int argc, char* argv[]){
 		carnetAdrServeur = interpretationCmd(
 			getTypeFromFormat(buf), client, msg, t, carnetAdrServeur);
 	}
-	
+
+	// Prévient les autres serveurs qu'il s'arrete.	
+	deconnexionServeur(socket, carnetAdrServeur);
+
 	/** Fermeture */
 	close(port);
 	free(carnetAdrServeur);

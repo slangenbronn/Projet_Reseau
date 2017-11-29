@@ -270,11 +270,9 @@ char* creationFormat(type_t type, char* message){
     short taille; 
     int index = 0;
 
-    printf("mol\n");
     if (message != NULL){
         tailleMsg = strlen(message);
     }
-    printf("qsd\n");
     
     if (tailleMsg > TAILLE_MSG_MAX){
         fprintf(stderr, "taille du message trop grand\n");
