@@ -52,12 +52,7 @@ void interpretationCmd(
             }
             // Encapsuler message
             msgFormate = creationFormat(cmd, msg);
-            //printf("msg format: %s\n", msgFormate);
-            
 
-            int tailleMsg = getTailleFromFormat(msgFormate);
-            printf("taille %d\n", tailleMsg);
-            printf("msg: %s\n", getMsgFromFormat(tailleMsg, msgFormate));
             // Envoyer msg
             envoieMsg(ipServeur, port, msgFormate);
             printf("fin put\n");

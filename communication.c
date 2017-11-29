@@ -264,12 +264,18 @@ type_t getTypeFromString(char* string){
  */
 char* creationFormat(type_t type, char* message){
     char* buf;
-    short tailleMsg = strlen(message);
+    short tailleMsg = 0;
     char ty[1];
     char tai[2];
     short taille; 
     int index = 0;
 
+    printf("mol\n");
+    if (message != NULL){
+        tailleMsg = strlen(message);
+    }
+    printf("qsd\n");
+    
     if (tailleMsg > TAILLE_MSG_MAX){
         fprintf(stderr, "taille du message trop grand\n");
         exit(1);

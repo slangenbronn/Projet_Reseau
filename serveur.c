@@ -396,9 +396,40 @@ void test(table *t){
 }
 
 
-/*void connexionServeur(int socket, adresse *adr){
-	msgFormate = creationFormat(cmd, msg);
-}*/
+/**
+ * @brief établie une connexion avec le serveur
+ * @param socket socket de communication
+ * @param adr adresse du serveur à contacter
+ * @return 1 si connexion étable sinon 0
+ */
+int connexionServeur(int socket, adresse *adr){
+	char buf[2048];
+	struct sockaddr_in6 serveur;
+	type_t type;
+	char *msgFormate;
+
+	msgFormate = creationFormat(CONNECT, NULL);
+
+	// Envoie le message de connexion
+	envoie(socket, adr->ip, adr->port, msgFormate);
+	free(msgFormate);
+
+	// Attend la réponse
+	serveur = recevoir(socket, buf);
+
+
+	// Vérifie si l'identité du répondeur correspond au serveur
+	if (strcmp(ipToString(adr->ip), 
+			ipToString(serveur.sin6_addr)) !=0){
+		fprintf(stderr, "C'est pas la bonne personne\n");
+		exit(1);
+	}
+
+	// Regarde si la connexion est accepté
+	type = getTypeFromFormat(buf);
+
+	return type == ACCEPTE_CONNECT;
+}
 
 /**
  * @brief Interprete la commande
@@ -447,6 +478,14 @@ void interpretationCmd(type_t cmd,
 			// Envoie du msg
 			envoieMsg(envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 			break;
+
+		case CONNECT:
+			printf("CONNECT\n");
+			msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
+
+			// Envoie du msg
+			envoieMsg(envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			break;
 		default:
 			fprintf(stderr, "commande inconnue\n");
 			printf("%s\n", ipToString(envoyeur.sin6_addr));
@@ -455,7 +494,7 @@ void interpretationCmd(type_t cmd,
 }
 
 int main(int argc, char* argv[]){
-	if(argc != 3 || argc != 5){
+	if(argc != 3 && argc != 5){
 		printf("usage: %s <adresse> <port> [adresse port [...]]\n", argv[0]);
 		exit(1);
 	}
@@ -464,12 +503,12 @@ int main(int argc, char* argv[]){
 	int port;
 	int nbMessage = 3;
 	int socket;
-	int i, j;
+	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
 	char *msg;
 	table *t;
-	adresse *carnetAdrServeur = malloc(sizeof(adresse));
+	adresse *carnetAdrServeur = NULL;
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
@@ -486,6 +525,8 @@ int main(int argc, char* argv[]){
 
 	// Si il y a des serveurs en option
 	if (argc > 3){
+		carnetAdrServeur = malloc(sizeof(adresse));
+
 		carnetAdrServeur->ip = recuperer_adresse(argv[3]);
 
 		if(verification_port(argv[4]) == 0){
@@ -507,6 +548,17 @@ int main(int argc, char* argv[]){
 	socket = initSocketPort(port, ip);
 
 	/** Contacte les serveurs des options */
+	if (carnetAdrServeur != NULL){
+		if (!connexionServeur(socket, carnetAdrServeur)){
+			free(carnetAdrServeur);
+			//carnetAdrServeur = NULL;
+		}
+		else{
+			printf("connexion etablie\n");	
+		}
+	}
+	
+	printf("oui\n");
 
 	for (i = 0; i < nbMessage; ++i){
 		/** Reception Message */
