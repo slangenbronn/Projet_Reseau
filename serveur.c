@@ -448,6 +448,7 @@ adresse* interpretationCmd(type_t cmd,
 	info_message infMessage;
 	struct in6_addr* tabIp;
 	char* msgFormat;
+	char adrString1[INET6_ADDRSTRLEN], adrString2[INET6_ADDRSTRLEN];
 
 	switch(cmd){
 		case PUT:
@@ -483,19 +484,29 @@ adresse* interpretationCmd(type_t cmd,
 		case CONNECT:
 			printf("CONNECT\n");
 			// On peut accepter un serveur
+			// Si on a pas de serveur 
 			if (carnetAdrServeur == NULL){
 				printf("ACCEPTE_CONNECT\n");
 				msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
 				carnetAdrServeur = malloc(sizeof(adresse));
 				carnetAdrServeur->ip = envoyeur.sin6_addr;
 				carnetAdrServeur->port = envoyeur.sin6_port;
-				printf("carnetAdrServeur: %d\n", carnetAdrServeur==NULL);
 			}
 			// On ne peut pas accepter le servur
-			//if(carnetAdrServeur != NULL){
 			else{
-				printf("DENIED_CONNECT\n");
-				msgFormat = creationFormat(DENIED_CONNECT, NULL);
+				// Si la demande vient d'un serveur que l'on a déjà 
+				// dans le carnet d'adresse
+				if (strcmp(ipToString2(adrString1, carnetAdrServeur->ip), 
+						ipToString2(adrString2, envoyeur.sin6_addr)) ==0 
+					&& envoyeur.sin6_port == carnetAdrServeur->port){
+					printf("Meme serveur\n");
+					// On envoie qu'on accepte la connexion
+					msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
+				}
+				else{
+					printf("DENIED_CONNECT\n");
+					msgFormat = creationFormat(DENIED_CONNECT, NULL);
+				}
 			}
 			
 			// Envoie du msg
@@ -530,6 +541,12 @@ adresse* interpretationCmd(type_t cmd,
 }*/
 
 int main(int argc, char* argv[]){
+	/*char adrString1[INET6_ADDRSTRLEN], adrString2[INET6_ADDRSTRLEN];
+	printf("ip1 %s\n", ipToString2(adrString1, 
+		recuperer_adresse("::1")));
+	printf("ip2 %s\n", ipToString2(adrString2, 
+		recuperer_adresse("::2")));
+	return 0;*/
 	if(argc != 3 && argc != 5){
 		printf("usage: %s <adresse> <port> [adresse port [...]]\n", argv[0]);
 		exit(1);
@@ -577,13 +594,20 @@ int main(int argc, char* argv[]){
 	t = init_DHT();
 
 	test(t);
-	//return 0;
 
 	/** Initialisation */
 	socket = initSocketPort(port, ip);
 
 	/** Contacte les serveurs des options */
 	if (carnetAdrServeur != NULL){
+		if (!connexionServeur(socket, carnetAdrServeur)){
+			free(carnetAdrServeur);
+			//carnetAdrServeur = NULL;
+		}
+		else{
+			printf("connexion etablie\n");	
+		}
+
 		if (!connexionServeur(socket, carnetAdrServeur)){
 			free(carnetAdrServeur);
 			//carnetAdrServeur = NULL;
