@@ -112,6 +112,9 @@ int existence_couple(table* t, char* hash, struct in6_addr ip){
 
 	int trouve = 0;
 	table_hash* temp_hash = existence_hash(t, hash);
+	char ipstr[INET6_ADDRSTRLEN];
+	ipToString(ip, ipstr);
+	char tempstr[INET6_ADDRSTRLEN];
 
 	//Si le hash à été trouvé dans la table
 	if(temp_hash != NULL){
@@ -120,7 +123,8 @@ int existence_couple(table* t, char* hash, struct in6_addr ip){
 		//On continue de chercher tant que l'on a pas atteint la fin 
 		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
 		while(temp_ip != NULL && trouve == 0){
-			if(strcmp(ipToString(temp_ip->ip), ipToString(ip))==0){ 
+			ipToString(temp_ip->ip, tempstr);
+			if(strcmp(tempstr, ipstr)==0){ 
 				trouve = 1;
 			}
 			else{
@@ -396,9 +400,8 @@ void test(table *t){
 	
 	insertion_DHT(t, recuperer_adresse("::1"), "456");
 	insertion_DHT(t, recuperer_adresse("::1"), "21");
-	insertion_DHT(t, recuperer_adresse("::2"), "456");
+	insertion_DHT(t, recuperer_adresse("google.fr"), "456");
 	affiche(t);
-	printf("NB ip :%i\n", nombre_ip(t, "21"));
 }
 
 
@@ -463,7 +466,7 @@ void interpretationCmd(type_t cmd,
 }
 
 int main(int argc, char* argv[]){
-	if(argc != 3 || argc != 5){
+	if(argc != 3 && argc != 5){
 		printf("usage: %s <adresse> <port> [adresse port [...]]\n", argv[0]);
 		exit(1);
 	}
@@ -472,7 +475,7 @@ int main(int argc, char* argv[]){
 	int port;
 	int nbMessage = 3;
 	int socket;
-	int i, j;
+	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
 	char *msg;
