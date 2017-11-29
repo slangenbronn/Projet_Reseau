@@ -9,8 +9,7 @@
 
 #define MAX_CONNEXION 10
 
-//Structure contenant un ip, l'heure de l'insertion dans la table des hash
-//et l'ip suivant, appartenant au même hash
+//Structure contenant un ip, et l'ip suivant, appartenant au même hash
 typedef struct table_ip table_ip;
 struct table_ip{
 	struct in6_addr ip;
@@ -458,10 +457,146 @@ void test(table *t){
 	affiche(t);
 }
 
+/**
+ * @brief Envoie toute sa table de hash 
+ * lors d'une premiere connexion avec un autre serveur
+ * @param socket socket d'envoie
+ * @param adresse du serveur
+ * @param t table de hash
+ */
+void envoieTableHash(int socket, adresse *adrServeur, table *t){
+	int tailleTabIp=0;
+	struct in6_addr* tabIp;
+	table_hash *temp;
+	char *msg, *msgFormat;
 
-/*void connexionServeur(int socket, adresse *adr){
-	msgFormate = creationFormat(cmd, msg);
-}*/
+	for (temp = t->premier; temp != NULL; temp = temp->hash_suivant){
+		tailleTabIp = nombre_ip(t, temp->hash);
+		tabIp = get_ip(t, temp->hash);
+
+		printf("hash %s\n", temp->hash);
+		// On initialise le message
+		msg = creationMsg(temp->hash, tabIp, tailleTabIp);
+		msgFormat = creationFormat(PUT, msg);
+
+		// Envoie du msg
+		envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+		free(msgFormat);
+	}
+
+	// Envoie de message fin de transmission table
+	printf("Fin transmission table\n");
+	msgFormat = creationFormat(FIN_TRANSMISSION_TABLE, NULL);
+	// Envoie du msg
+	envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+
+	//Si la liste est non vide
+	/*if(t->premier != NULL){
+		//On parcours toute la liste
+		while(i == 0 && temp != NULL){
+			//Jusqu'a trouver le hash voulu
+			if(strcmp(temp->hash, hash)==0){
+				i = 1;
+			}
+			else{
+				//Ou qu'on atteigne la fin de la liste
+				temp = temp->hash_suivant;
+			}
+		}
+	}*/
+	/*
+	tailleTabIp = nombre_ip(t, infMessage.hash);
+	tabIp = get_ip(t, infMessage.hash);
+
+	// On initialise le message
+	msg = creationMsg(..., tabIp, tailleTabIp);
+	msgFormat = creationFormat(PUT, msg);
+
+	// Envoie du msg
+	envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);*/
+
+
+}
+
+/**
+ * @brief établie une connexion avec le serveur
+ * @param socket socket de communication
+ * @param adr adresse du serveur à contacter
+ * @return 1 si connexion étable sinon 0
+ */
+int connexionServeur(int socket, adresse *adr){
+	char buf[2048];
+	struct sockaddr_in6 serveur;
+	type_t type;
+	char *msgFormate;
+
+	msgFormate = creationFormat(CONNECT, NULL);
+
+	// Envoie le message de connexion
+	envoie(socket, adr->ip, adr->port, msgFormate);
+	free(msgFormate);
+
+	// Attend la réponse
+	serveur = recevoir(socket, buf);
+
+
+	// Vérifie si l'identité du répondeur correspond au serveur
+	if (strcmp(ipToString(adr->ip), 
+			ipToString(serveur.sin6_addr)) !=0){
+		fprintf(stderr, "C'est pas la bonne personne\n");
+		exit(1);
+	}
+
+	// Regarde si la connexion est accepté
+	type = getTypeFromFormat(buf);
+	if (type == ACCEPTE_CONNECT)
+	{
+		printf("On reçois des trucs\n");
+	}
+
+	return type == ACCEPTE_CONNECT;
+}
+
+/**
+ * @brief déconnexion d'un serveur
+ * @param socket d'envoie
+ * @param adrServeur adresseur du serveur connecté
+ */
+void deconnexionServeur(int socket, adresse* adrServeur){
+	char* msgFormate;
+	if(adrServeur != NULL){
+		msgFormate = creationFormat(DISCONNECT, NULL);
+
+		// Envoie le message de connexion
+		envoie(socket, adrServeur->ip, adrServeur->port, msgFormate);
+		free(msgFormate);
+	}
+}
+
+/**
+ * @brief Envoie des nouvelles données reçus aux autres serveurs
+ * @param socket socket d'envoie
+ * @param envoyeur personne ayant envoyé le put
+ * @param adrServeur carnet d'adresse de serveur
+ * @param msg message reçus
+ */
+void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur, 
+	adresse *adrServeur, char* msg){
+	char adrString1[INET6_ADDRSTRLEN], 
+		adrString2[INET6_ADDRSTRLEN];
+	char* msgFormat;
+
+	if (adrServeur != NULL){
+		// Vérifie si l'envoyeur n'est pas le serveur auquel on est connecté
+		if (strcmp(ipToString2(adrString1, adrServeur->ip), 
+				ipToString2(adrString2, envoyeur.sin6_addr)) !=0 
+				|| envoyeur.sin6_port != adrServeur->port){
+			msgFormat = creationFormat(PUT, msg);
+			envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+			free(msgFormat);
+		}
+	}
+}
 
 /**
  * @brief Interprete la commande
@@ -470,19 +605,27 @@ void test(table *t){
  * @param msg message reçus
  * @param t table de hash 
  */
-void interpretationCmd(type_t cmd, 
+adresse* interpretationCmd(
+	int socket,
+	type_t cmd, 
 	struct sockaddr_in6 envoyeur,
 	char* msg, 
-	table *t){
+	table *t,
+	adresse *carnetAdrServeur){
 
 	int i, tailleTabIp;
 	info_message infMessage;
 	struct in6_addr* tabIp;
 	char* msgFormat;
+	char adrString1[INET6_ADDRSTRLEN], adrString2[INET6_ADDRSTRLEN];
 
 	switch(cmd){
 		case PUT:
 			printf("PUT\n");
+			// Envoie de l'info aux autres serveurs
+			envoiePutServeur(socket, envoyeur, carnetAdrServeur, msg);
+
+
 			infMessage = decryptageMsg(msg);
 
 			if (infMessage.taille != 0){
@@ -508,7 +651,68 @@ void interpretationCmd(type_t cmd,
 			msgFormat = creationFormat(PUT, msg);
 
 			// Envoie du msg
-			envoieMsg(envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			break;
+
+		case CONNECT:
+			printf("CONNECT\n");
+			// On peut accepter un serveur
+			// Si on a pas de serveur 
+			if (carnetAdrServeur == NULL){
+				printf("ACCEPTE_CONNECT\n");
+				msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
+				carnetAdrServeur = malloc(sizeof(adresse));
+				carnetAdrServeur->ip = envoyeur.sin6_addr;
+				carnetAdrServeur->port = envoyeur.sin6_port;
+
+				// Envoie du msg
+				envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+
+				// On envoie notre table
+				envoieTableHash(socket, carnetAdrServeur, t);
+			}
+			// On ne peut pas accepter le servur
+			else{
+				// Si la demande vient d'un serveur que l'on a déjà 
+				// dans le carnet d'adresse
+				if (strcmp(ipToString2(adrString1, carnetAdrServeur->ip), 
+						ipToString2(adrString2, envoyeur.sin6_addr)) ==0 
+					&& envoyeur.sin6_port == carnetAdrServeur->port){
+					printf("Meme serveur\n");
+					// On envoie qu'on accepte la connexion
+					msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
+
+					// Envoie du msg
+					envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+
+					// On envoie notre table
+					envoieTableHash(socket, carnetAdrServeur, t);
+				}
+				else{
+					printf("DENIED_CONNECT\n");
+					msgFormat = creationFormat(DENIED_CONNECT, NULL);
+
+					// Envoie du msg
+				envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+				}
+			}			
+			break;
+		case DISCONNECT:
+			printf("DISCONNECT\n");
+			if (strcmp(ipToString2(adrString1, carnetAdrServeur->ip), 
+					ipToString2(adrString2, envoyeur.sin6_addr)) ==0 
+				&& envoyeur.sin6_port == carnetAdrServeur->port){
+				printf("Meme serveur\n");
+				// On envoie qu'on accepte la connexion
+				free(carnetAdrServeur);
+				carnetAdrServeur = NULL;
+			}
+			break;
+		case ACCEPTE_CONNECT:
+			/* Ignorer */
+			break;
+		case FIN_TRANSMISSION_TABLE:
+			/* rien à faire */
 			break;
 		default:
 			fprintf(stderr, "commande inconnue\n");
@@ -516,7 +720,8 @@ void interpretationCmd(type_t cmd,
 			ipToString(envoyeur.sin6_addr, ipstr);
 			printf("%s\n", ipstr);
 			exit(1);
-	}	
+	}
+	return carnetAdrServeur;	
 }
 
 int main(int argc, char* argv[]){
@@ -526,15 +731,14 @@ int main(int argc, char* argv[]){
 	}
 
 	struct in6_addr ip;
-	int port;
-	int nbMessage = 3;
-	int socket;
+	int port, socket;
+	int nbMessage = 5;
 	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
 	char *msg;
 	table *t;
-	adresse *carnetAdrServeur = malloc(sizeof(adresse));
+	adresse *carnetAdrServeur = NULL;
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
@@ -551,6 +755,8 @@ int main(int argc, char* argv[]){
 
 	// Si il y a des serveurs en option
 	if (argc > 3){
+		carnetAdrServeur = malloc(sizeof(adresse));
+
 		carnetAdrServeur->ip = recuperer_adresse(argv[3]);
 
 		if(verification_port(argv[4]) == 0){
@@ -565,13 +771,19 @@ int main(int argc, char* argv[]){
 
 	t = init_DHT();
 
-	test(t);
-	//return 0;
-
 	/** Initialisation */
 	socket = initSocketPort(port, ip);
 
 	/** Contacte les serveurs des options */
+	if (carnetAdrServeur != NULL){
+		if (!connexionServeur(socket, carnetAdrServeur)){
+			free(carnetAdrServeur);
+			carnetAdrServeur = NULL;
+		}
+		else{
+			printf("connexion etablie\n");
+		}
+	}
 
 	for (i = 0; i < nbMessage; ++i){
 		/** Reception Message */
@@ -580,9 +792,13 @@ int main(int argc, char* argv[]){
 		printf("Message reçus\n");
 
 		msg = getMsgFromFormat(getTailleFromFormat(buf),buf);
-		interpretationCmd(getTypeFromFormat(buf), client, msg, t);
+		carnetAdrServeur = interpretationCmd( socket,
+			getTypeFromFormat(buf), client, msg, t, carnetAdrServeur);
 	}
-	
+
+	// Prévient les autres serveurs qu'il s'arrete.	
+	deconnexionServeur(socket, carnetAdrServeur);
+
 	/** Fermeture */
 	close(port);
 	free(carnetAdrServeur);
