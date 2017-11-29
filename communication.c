@@ -447,6 +447,19 @@ char* ipToString(struct in6_addr ip){
     return ipstr;
 }
 
+
+/**
+ * @brief Transforme une adresse ip en string
+ * @param dst destination
+ * @param ip ip à transformer
+ * @return ip en string
+ */
+char* ipToString2(char* dst, struct in6_addr ip){
+    memset(dst,'\0',INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6, (void*)&(ip), dst, sizeof(dst));
+    return dst;
+}
+
 /**
  * @brief Donne l'adresse correspondante au host donnée en paramètre
  *
@@ -474,7 +487,6 @@ struct in6_addr recuperer_adresse(char* adresse){
     freeaddrinfo(res);
 
 	return ipv6->sin6_addr;
-
 }
 
 /**

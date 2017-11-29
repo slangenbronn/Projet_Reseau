@@ -59,6 +59,7 @@ info_message decryptageMsg(char* msg);
 
 /** --Fonction Utile-- */
 char* ipToString(struct in6_addr ip);
+char* ipToString2(char* dst, struct in6_addr ip);
 struct in6_addr recuperer_adresse(char* adresse);
 int verification_port(char* port);
 
