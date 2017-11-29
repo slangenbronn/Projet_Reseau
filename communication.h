@@ -5,6 +5,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <time.h>
 
 /** --Type pour le format de données-- */
 #define TAILLE_MSG_MAX 1024
