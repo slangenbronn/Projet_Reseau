@@ -251,7 +251,11 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 		//On continue de chercher tant que l'on a pas atteint la fin
 		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
 		while(temp_ip != NULL && trouve == 0){
-			if(strcmp((ipToString(temp_ip->ip)), (ipToString(ip))) == 0){
+			char ipstr1[INET6_ADDRSTRLEN];
+			char ipstr2[INET6_ADDRSTRLEN];
+			ipToString(temp_ip->ip, ipstr1);
+			ipToString(ip, ipstr2);
+			if(strcmp(ipstr1, ipstr2) == 0){
 				trouve = 1;
 			}
 			else{
@@ -367,7 +371,9 @@ void affiche(table* t){
 	while(temp_h != NULL){
 		printf("--- Hash : %s ---\n", temp_h->hash);
 		while(temp_ip != NULL){
-			printf("ip : %s\n", ipToString(temp_ip->ip));
+			char ipstr[INET6_ADDRSTRLEN];
+			ipToString(temp_ip->ip, ipstr);
+			printf("ip : %s\n", ipstr);
 			temp_ip = temp_ip->ip_suivant;
 		}
 		temp_h = temp_h->hash_suivant;
@@ -386,7 +392,12 @@ void test(){
 
 	insertion_DHT(t, recuperer_adresse("::1"), "15");
 	insertion_DHT(t, recuperer_adresse("::1"), "21");
-	insertion_DHT(t, recuperer_adresse("::1"), "15");
+	insertion_DHT(t, recuperer_adresse("google.fr"), "15");
+	struct in6_addr ip = recuperer_adresse("google.fr");
+	void *addr = &ip;
+	char ipstr[INET6_ADDRSTRLEN];
+	inet_ntop(AF_INET6, addr, ipstr, sizeof ipstr);
+	printf("Google : %s\n", ipstr);
 	affiche(t);
 	printf("NB ip :%i\n", nombre_ip(t, "21"));
 }
@@ -418,7 +429,9 @@ void interpretationCmd(type_t cmd,
 			break;
 		default:
 			fprintf(stderr, "commande inconnue\n");
-			printf("%s\n", ipToString(envoyeur.sin6_addr));
+			char ipstr[INET6_ADDRSTRLEN];
+			ipToString(envoyeur.sin6_addr, ipstr);
+			printf("%s\n", ipstr);
 			exit(1);
 	}
 	printf("fin cmd\n");	

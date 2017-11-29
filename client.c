@@ -91,7 +91,9 @@ void interpretationCmd(
 
             printf("hash: %s\n", infMessage.hash);
             for (i = 0; i < infMessage.taille; ++i){
-                printf("\tip%d %s\n", i, ipToString(infMessage.ips[i]));
+				char ipstr[INET6_ADDRSTRLEN];
+				ipToString(infMessage.ips[i], ipstr);
+                printf("\tip%d %s\n", i, ipstr);
             }
             break;
         default:

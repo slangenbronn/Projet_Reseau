@@ -369,10 +369,11 @@ info_message decryptageMsg(char* msg){
  * @param ip ip à transformer
  * @return ip en string
  */
-char* ipToString(struct in6_addr ip){
-    char* ipstr = malloc(INET6_ADDRSTRLEN);
-    inet_ntop(AF_INET6, (void*)&(ip), ipstr, sizeof(ipstr));
-    return ipstr;
+void ipToString(struct in6_addr ip, char* res){
+    char ipstr[INET6_ADDRSTRLEN];
+	void* addr = &ip;
+    inet_ntop(AF_INET6, addr, ipstr, sizeof(ipstr));
+	memcpy(res, ipstr, sizeof(ipstr));
 }
 
 /**

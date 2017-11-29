@@ -58,7 +58,7 @@ char* creationMsg(char* hash, struct in6_addr* ips, int taille);
 info_message decryptageMsg(char* msg);
 
 /** --Fonction Utile-- */
-char* ipToString(struct in6_addr ip);
+void ipToString(struct in6_addr ip, char* res);
 struct in6_addr recuperer_adresse(char* adresse);
 int verification_port(char* port);
 
