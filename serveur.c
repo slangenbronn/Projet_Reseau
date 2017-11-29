@@ -161,6 +161,36 @@ int nombre_ip(table* t, char* hash){
 }
 
 
+/** 
+ * @brief Remet le compteur de temps de l'ip associé au hash à 0
+ *
+ * @param t Liste contenant les ip et les hash
+ * @param hash Valeur du hash dans laquelle est enregsitré l'ip
+ * @param ip IP que dont l'on veut remettre le timer à 0
+ */
+void reset_timer(table* t, char* hash, struct in6_addr ip){
+	
+	table_hash* temp_h = existence_hash(t, hash);
+	char ipstr[INET6_ADDRSTRLEN];
+	ipToString(ip, ipstr);
+	char tempstr[INET6_ADDRSTRLEN];
+
+	if(temp_h != NULL){
+		table_ip* temp_ip = temp_h->t_ip;
+		while(temp_ip != NULL){
+			ipToString(ip, tempstr);
+			if(strcmp(ipstr, tempstr) == 0){
+				time(&temp_ip->t_inser);
+				temp_ip = NULL;
+			}
+			else{
+				temp_ip = temp_ip->ip_suivant;
+			}
+		}
+	}
+}
+
+
 /**
  * @brief Insert dans la liste des hash et des ip associés un nouvel ip
  *
@@ -192,10 +222,16 @@ void insertion_DHT(table *t, struct in6_addr ip, char* hash){
 	}
 	//Si la valeur du hash est trouvé dans la liste on y ajoute juste l'ip
 	else{
-		//On fait pointer la valeur suivant sur l'ancien premier ip
-		nouveau_ip->ip_suivant = temp->t_ip;
-		//On ajoute le nouvel ip en début de liste
-		temp->t_ip = nouveau_ip;
+		//Si l'ip est déjà enregistré dans la table de hash
+		if(existence_couple(t, hash, ip) == 1){
+			reset_timer(t, hash, ip);
+		}
+		else{
+			//On fait pointer la valeur suivant sur l'ancien premier ip
+			nouveau_ip->ip_suivant = temp->t_ip;
+			//On ajoute le nouvel ip en début de liste
+			temp->t_ip = nouveau_ip;
+		}
 	}
 }
 
@@ -311,7 +347,10 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 int ip_valide(table_ip* ip){
 
 	time_t end;
+	//On initialise un timer avec l'heure actuelle
 	time(&end);
+	//On la compare avec l'heure de l'insertion de l'ip
+	//Si la différence entre les deux est de plus de 30s
 	if(difftime(end, ip->t_inser) >= 30){
 		return 0;
 	}
@@ -325,19 +364,18 @@ int ip_valide(table_ip* ip){
  *
  * @param t Table contenant les hash et les ip associés
  */
-void validite_ip(table* t){
+void nettoyage_ip(table* t, char* hash){
 
-	table_hash* temp_h = t->premier;
+	table_hash* temp_h = existence_hash(t, hash);
 	table_ip* temp_ip = temp_h->t_ip;
 
-	while(temp_h != NULL){
+	if(temp_h != NULL){
 		while(temp_ip != NULL){
 			if(ip_valide(temp_ip) == 0){
 				supprimer_ip(t, temp_h->hash, temp_ip->ip);
 			}
 			temp_ip = temp_ip->ip_suivant;
 		}
-		temp_h = temp_h->hash_suivant;
 	}
 }
 
@@ -353,6 +391,7 @@ struct in6_addr* get_ip(table* t, char* hash){
 
 	table_hash* temp_h = existence_hash(t, hash);
 	struct in6_addr* table_ip6;
+	nettoyage_ip(t, hash);
 	if(temp_h != NULL){
 		int taille = nombre_ip(t, hash);
 		int i = 0;
@@ -401,6 +440,7 @@ void test(table *t){
 	insertion_DHT(t, recuperer_adresse("::1"), "456");
 	insertion_DHT(t, recuperer_adresse("::1"), "21");
 	insertion_DHT(t, recuperer_adresse("google.fr"), "456");
+	insertion_DHT(t, recuperer_adresse("::1"), "456");
 	affiche(t);
 }
 
