@@ -448,13 +448,48 @@ void deconnexionServeur(int socket, adresse* adrServeur){
 }
 
 /**
+ * @brief Envoie des nouvelles données reçus aux autres serveurs
+ * @param socket socket d'envoie
+ * @param envoyeur personne ayant envoyé le put
+ * @param adrServeur carnet d'adresse de serveur
+ * @param msg message reçus
+ */
+void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur, 
+	adresse *adrServeur, char* msg){
+	char adrString1[INET6_ADDRSTRLEN], 
+		adrString2[INET6_ADDRSTRLEN];
+	char* msgFormat;
+
+	if (adrServeur != NULL){
+		// Vérifie si l'envoyeur n'est pas le serveur auquelle on est connecté
+		if (strcmp(ipToString2(adrString1, adrServeur->ip), 
+				ipToString2(adrString2, envoyeur.sin6_addr)) !=0 
+				|| envoyeur.sin6_port != adrServeur->port){
+			printf("pas le meme serveur\n");
+
+			msgFormat = creationFormat(PUT, msg);
+			envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+			free(msgFormat);
+		}
+		else{
+			printf("le meme\n");
+		}
+	}
+	else{
+		printf("pas de serveur\n");
+	}
+}
+
+/**
  * @brief Interprete la commande
  * @param cmd commande à interpréter
  * @param envoyeur info de l'envoyeur
  * @param msg message reçus
  * @param t table de hash 
  */
-adresse* interpretationCmd(type_t cmd, 
+adresse* interpretationCmd(
+	int socket,
+	type_t cmd, 
 	struct sockaddr_in6 envoyeur,
 	char* msg, 
 	table *t,
@@ -469,6 +504,10 @@ adresse* interpretationCmd(type_t cmd,
 	switch(cmd){
 		case PUT:
 			printf("PUT\n");
+			// Envoie de l'info aux autres serveurs
+			envoiePutServeur(socket, envoyeur, carnetAdrServeur, msg);
+
+
 			infMessage = decryptageMsg(msg);
 
 			if (infMessage.taille != 0){
@@ -480,6 +519,7 @@ adresse* interpretationCmd(type_t cmd,
 			else{
 				insertion_DHT(t, envoyeur.sin6_addr, infMessage.hash);
 			}
+			affiche(t);
 			break;
 		case GET:
 			printf("GET\n");
@@ -494,7 +534,7 @@ adresse* interpretationCmd(type_t cmd,
 			msgFormat = creationFormat(PUT, msg);
 
 			// Envoie du msg
-			envoieMsg(envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 			break;
 
 		case CONNECT:
@@ -526,7 +566,7 @@ adresse* interpretationCmd(type_t cmd,
 			}
 			
 			// Envoie du msg
-			envoieMsg(envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 			break;
 		case DISCONNECT:
 			printf("DISCONNECT\n");
@@ -550,26 +590,6 @@ adresse* interpretationCmd(type_t cmd,
 	return carnetAdrServeur;	
 }
 
-/*void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur, 
-	adresse adrServeur, char* msg){
-	char adrString1[INET6_ADDRSTRLEN], adrString2[INET6_ADDRSTRLEN];
-
-	if (adrServeur != NULL){
-		// Vérifie si l'envoyeur n'est pas le serveur auquelle on est connecté
-		if (strcmp(ipToString2(adrString1, adr->ip), 
-				ipToString2(adrString2, envoyeur.sin6_addr)) !=0 
-				&& envoyeur.sin6_port != adrServeur->port){
-			printf("pas le meme serveur\n");
-		}
-		else{
-			printf("le meme\n");
-		}
-	}
-	else{
-		printf("pas de serveur\n");
-	}
-}*/
-
 int main(int argc, char* argv[]){
 	if(argc != 3 && argc != 5){
 		printf("usage: %s <adresse> <port> [adresse port [...]]\n", argv[0]);
@@ -578,7 +598,7 @@ int main(int argc, char* argv[]){
 
 	struct in6_addr ip;
 	int port, socket;
-	int nbMessage = 3;
+	int nbMessage = 5;
 	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
@@ -617,8 +637,6 @@ int main(int argc, char* argv[]){
 
 	t = init_DHT();
 
-	//test(t);
-
 	/** Initialisation */
 	socket = initSocketPort(port, ip);
 
@@ -626,7 +644,7 @@ int main(int argc, char* argv[]){
 	if (carnetAdrServeur != NULL){
 		if (!connexionServeur(socket, carnetAdrServeur)){
 			free(carnetAdrServeur);
-			//carnetAdrServeur = NULL;
+			carnetAdrServeur = NULL;
 		}
 		else{
 			printf("connexion etablie\n");
@@ -640,7 +658,7 @@ int main(int argc, char* argv[]){
 		printf("Message reçus\n");
 
 		msg = getMsgFromFormat(getTailleFromFormat(buf),buf);
-		carnetAdrServeur = interpretationCmd(
+		carnetAdrServeur = interpretationCmd( socket,
 			getTypeFromFormat(buf), client, msg, t, carnetAdrServeur);
 	}
 
