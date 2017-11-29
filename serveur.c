@@ -489,33 +489,6 @@ void envoieTableHash(int socket, adresse *adrServeur, table *t){
 	msgFormat = creationFormat(FIN_TRANSMISSION_TABLE, NULL);
 	// Envoie du msg
 	envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
-
-	//Si la liste est non vide
-	/*if(t->premier != NULL){
-		//On parcours toute la liste
-		while(i == 0 && temp != NULL){
-			//Jusqu'a trouver le hash voulu
-			if(strcmp(temp->hash, hash)==0){
-				i = 1;
-			}
-			else{
-				//Ou qu'on atteigne la fin de la liste
-				temp = temp->hash_suivant;
-			}
-		}
-	}*/
-	/*
-	tailleTabIp = nombre_ip(t, infMessage.hash);
-	tabIp = get_ip(t, infMessage.hash);
-
-	// On initialise le message
-	msg = creationMsg(..., tabIp, tailleTabIp);
-	msgFormat = creationFormat(PUT, msg);
-
-	// Envoie du msg
-	envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);*/
-
-
 }
 
 /**
@@ -529,6 +502,7 @@ int connexionServeur(int socket, adresse *adr){
 	struct sockaddr_in6 serveur;
 	type_t type;
 	char *msgFormate;
+	char ipString1[INET6_ADDRSTRLEN], ipString2[INET6_ADDRSTRLEN];
 
 	msgFormate = creationFormat(CONNECT, NULL);
 
@@ -541,8 +515,8 @@ int connexionServeur(int socket, adresse *adr){
 
 
 	// Vérifie si l'identité du répondeur correspond au serveur
-	if (strcmp(ipToString(adr->ip), 
-			ipToString(serveur.sin6_addr)) !=0){
+	if (strcmp(ipToString(adr->ip, ipString1), 
+			ipToString(serveur.sin6_addr, ipString2)) !=0){
 		fprintf(stderr, "C'est pas la bonne personne\n");
 		exit(1);
 	}
@@ -588,8 +562,8 @@ void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur,
 
 	if (adrServeur != NULL){
 		// Vérifie si l'envoyeur n'est pas le serveur auquel on est connecté
-		if (strcmp(ipToString2(adrString1, adrServeur->ip), 
-				ipToString2(adrString2, envoyeur.sin6_addr)) !=0 
+		if (strcmp(ipToString(adrServeur->ip, adrString1), 
+				ipToString(envoyeur.sin6_addr, adrString2)) !=0 
 				|| envoyeur.sin6_port != adrServeur->port){
 			msgFormat = creationFormat(PUT, msg);
 			envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
@@ -675,8 +649,8 @@ adresse* interpretationCmd(
 			else{
 				// Si la demande vient d'un serveur que l'on a déjà 
 				// dans le carnet d'adresse
-				if (strcmp(ipToString2(adrString1, carnetAdrServeur->ip), 
-						ipToString2(adrString2, envoyeur.sin6_addr)) ==0 
+				if (strcmp(ipToString(carnetAdrServeur->ip, adrString1), 
+						ipToString(envoyeur.sin6_addr, adrString2)) ==0 
 					&& envoyeur.sin6_port == carnetAdrServeur->port){
 					printf("Meme serveur\n");
 					// On envoie qu'on accepte la connexion
@@ -693,14 +667,14 @@ adresse* interpretationCmd(
 					msgFormat = creationFormat(DENIED_CONNECT, NULL);
 
 					// Envoie du msg
-				envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+					envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 				}
 			}			
 			break;
 		case DISCONNECT:
 			printf("DISCONNECT\n");
-			if (strcmp(ipToString2(adrString1, carnetAdrServeur->ip), 
-					ipToString2(adrString2, envoyeur.sin6_addr)) ==0 
+			if (strcmp(ipToString(carnetAdrServeur->ip, adrString1), 
+					ipToString(envoyeur.sin6_addr, adrString2)) ==0 
 				&& envoyeur.sin6_port == carnetAdrServeur->port){
 				printf("Meme serveur\n");
 				// On envoie qu'on accepte la connexion
