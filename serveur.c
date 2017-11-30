@@ -6,6 +6,8 @@
  */
 
 #include "communication.h"
+#include <pthread.h>
+#include <signal.h>
 
 #define MAX_CONNEXION 10
 
@@ -31,10 +33,20 @@ struct table{
 	table_hash *premier;
 };
 
+// Structure de carnet d'adresse
 typedef struct adresse{
 	struct in6_addr ip;
 	int port;
 } adresse;
+
+// Données à envoyer à la fonction keep alive
+typedef struct keepAlive{
+	adresse *adr;
+	struct in6_addr ip;
+	int socket;
+} varKeepAlive;
+
+adresse *carnetAdrServeurGlobale;
 
 /**
  * @brief Initialise une table contenant les hash les ip associés 
@@ -398,9 +410,9 @@ struct in6_addr* get_ip(table* t, char* hash){
 
 	table_hash* temp_h = existence_hash(t, hash);
 	struct in6_addr* table_ip6;
-	//On supprime les ip du hash qui sont obsolètes
-	nettoyage_ip(t, hash);
 	if(temp_h != NULL){
+		//On supprime les ip du hash qui sont obsolètes
+		nettoyage_ip(t, hash);
 		//On calcul le nombre de d'ip pour ce hash
 		int taille = nombre_ip(t, hash);
 		int i;
@@ -457,6 +469,72 @@ void test(table *t){
 	affiche(t);
 }
 
+
+/**
+ * @brief Envoie de message keep alive aux serveurs du carnet d'adresse
+ * @param socket socket d'envoie
+ * @param adrServeur carnet d'adresse de serveur
+ */
+ adresse* envoieKeepAlive(int socket, adresse *adrServeur){
+	char* msgFormat;
+	char buf[1024];
+	char adrString1[INET6_ADDRSTRLEN], 
+		adrString2[INET6_ADDRSTRLEN];
+	type_t type;
+	struct sockaddr_in6 envoyeur;
+	fd_set rfds;
+    struct timeval tv;
+    int retval;
+
+    if (adrServeur != NULL){
+    	// Préparation du message
+		msgFormat = creationFormat(ARE_YOU_ALIVE, NULL);
+
+		// Envoie du message
+		envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+
+		//Initialisation select
+	    FD_ZERO(&rfds);
+	    FD_SET(socket, &rfds);
+
+	    /* Pendant 5 secondes maxi */
+	    tv.tv_sec = TIME_OUT;
+	    tv.tv_usec = 0;
+
+	    retval = select(socket+1, &rfds, NULL, NULL, &tv);
+	    // Attend la réponse du serveur
+	    if (retval == -1){
+	        perror("connexionServeur: select()");
+	    }
+	    else if (retval){
+			envoyeur = recevoir(socket, buf);
+			// Si le message que l'on reçois vient du serveur
+			if (strcmp(ipToString(adrServeur->ip, adrString1), 
+				ipToString(envoyeur.sin6_addr, adrString2)) ==0 
+				&& envoyeur.sin6_port == adrServeur->port){
+				
+				type = getTypeFromFormat(buf);
+				//Si il répond qu'il n'est pas vivant
+				if (type != IM_ALIVE){ //----
+					free(adrServeur);
+					adrServeur = NULL;
+					printf("\tpas vivant\n");
+				}
+				else{
+					printf("\tLe serveur est vivant\n");
+				}
+			}
+	    }
+	    else{
+	        printf("Aucune données durant les %d secondes\n", TIME_OUT);
+	        free(carnetAdrServeurGlobale);
+			carnetAdrServeurGlobale = NULL;
+	    }
+    }
+    
+	return adrServeur;
+}
+
 /**
  * @brief Envoie toute sa table de hash 
  * lors d'une premiere connexion avec un autre serveur
@@ -464,7 +542,7 @@ void test(table *t){
  * @param adresse du serveur
  * @param t table de hash
  */
-void envoieTableHash(int socket, adresse *adrServeur, table *t){
+void envoieTableHash(int socket, table *t){
 	int tailleTabIp=0;
 	struct in6_addr* tabIp;
 	table_hash *temp;
@@ -474,13 +552,12 @@ void envoieTableHash(int socket, adresse *adrServeur, table *t){
 		tailleTabIp = nombre_ip(t, temp->hash);
 		tabIp = get_ip(t, temp->hash);
 
-		printf("hash %s\n", temp->hash);
 		// On initialise le message
 		msg = creationMsg(temp->hash, tabIp, tailleTabIp);
 		msgFormat = creationFormat(PUT, msg);
 
 		// Envoie du msg
-		envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+		envoie(socket, carnetAdrServeurGlobale->ip, carnetAdrServeurGlobale->port, msgFormat);
 		free(msgFormat);
 	}
 
@@ -488,7 +565,7 @@ void envoieTableHash(int socket, adresse *adrServeur, table *t){
 	printf("Fin transmission table\n");
 	msgFormat = creationFormat(FIN_TRANSMISSION_TABLE, NULL);
 	// Envoie du msg
-	envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+	envoie(socket, carnetAdrServeurGlobale->ip, carnetAdrServeurGlobale->port, msgFormat);
 }
 
 /**
@@ -503,6 +580,9 @@ int connexionServeur(int socket, adresse *adr){
 	type_t type;
 	char *msgFormate;
 	char ipString1[INET6_ADDRSTRLEN], ipString2[INET6_ADDRSTRLEN];
+	fd_set rfds;
+    struct timeval tv;
+    int retval;
 
 	msgFormate = creationFormat(CONNECT, NULL);
 
@@ -511,22 +591,40 @@ int connexionServeur(int socket, adresse *adr){
 	free(msgFormate);
 
 	// Attend la réponse
-	serveur = recevoir(socket, buf);
+	//Initialisation select
+    FD_ZERO(&rfds);
+    FD_SET(socket, &rfds);
 
+    /* Pendant 5 secondes maxi */
+    tv.tv_sec = TIME_OUT;
+    tv.tv_usec = 0;
 
-	// Vérifie si l'identité du répondeur correspond au serveur
-	if (strcmp(ipToString(adr->ip, ipString1), 
-			ipToString(serveur.sin6_addr, ipString2)) !=0){
-		fprintf(stderr, "C'est pas la bonne personne\n");
-		exit(1);
-	}
+    retval = select(socket+1, &rfds, NULL, NULL, &tv);
+    /* Considérer tv comme indéfini maintenant ! */
 
-	// Regarde si la connexion est accepté
-	type = getTypeFromFormat(buf);
-	if (type == ACCEPTE_CONNECT)
-	{
-		printf("On reçois des trucs\n");
-	}
+    if (retval == -1){
+        perror("connexionServeur: select()");
+    }
+    else if (retval){
+    	serveur = recevoir(socket, buf);
+
+		// Vérifie si l'identité du répondeur correspond au serveur
+		if (strcmp(ipToString(adr->ip, ipString1), 
+				ipToString(serveur.sin6_addr, ipString2)) !=0){
+			fprintf(stderr, "C'est pas la bonne personne\n");
+			exit(1);
+		}
+
+		// Regarde si la connexion est accepté
+		type = getTypeFromFormat(buf);
+		if (type != ACCEPTE_CONNECT){
+        	printf("Echecs de connexion: connexion refusé\n");
+		}
+    }
+    else{
+        printf("Echecs de connexion: Aucune données durant les %d secondes\n", 
+        	TIME_OUT);
+    }
 
 	return type == ACCEPTE_CONNECT;
 }
@@ -536,13 +634,13 @@ int connexionServeur(int socket, adresse *adr){
  * @param socket d'envoie
  * @param adrServeur adresseur du serveur connecté
  */
-void deconnexionServeur(int socket, adresse* adrServeur){
+void deconnexionServeur(int socket){
 	char* msgFormate;
-	if(adrServeur != NULL){
+	if(carnetAdrServeurGlobale != NULL){
 		msgFormate = creationFormat(DISCONNECT, NULL);
 
 		// Envoie le message de connexion
-		envoie(socket, adrServeur->ip, adrServeur->port, msgFormate);
+		envoie(socket, carnetAdrServeurGlobale->ip, carnetAdrServeurGlobale->port, msgFormate);
 		free(msgFormate);
 	}
 }
@@ -554,22 +652,37 @@ void deconnexionServeur(int socket, adresse* adrServeur){
  * @param adrServeur carnet d'adresse de serveur
  * @param msg message reçus
  */
-void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur, 
-	adresse *adrServeur, char* msg){
+void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur, char* msg){
 	char adrString1[INET6_ADDRSTRLEN], 
 		adrString2[INET6_ADDRSTRLEN];
 	char* msgFormat;
 
-	if (adrServeur != NULL){
+	if (carnetAdrServeurGlobale != NULL){
 		// Vérifie si l'envoyeur n'est pas le serveur auquel on est connecté
-		if (strcmp(ipToString(adrServeur->ip, adrString1), 
+		if (strcmp(ipToString(carnetAdrServeurGlobale->ip, adrString1), 
 				ipToString(envoyeur.sin6_addr, adrString2)) !=0 
-				|| envoyeur.sin6_port != adrServeur->port){
+				|| envoyeur.sin6_port != carnetAdrServeurGlobale->port){
 			msgFormat = creationFormat(PUT, msg);
-			envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+			envoie(socket, carnetAdrServeurGlobale->ip, carnetAdrServeurGlobale->port, msgFormat);
 			free(msgFormat);
 		}
 	}
+}
+
+/**
+ * @brief fonction pour le thread qui enverra des keep alive
+ * @param arg
+ */
+void *fctKeepAlive(void *arg){
+	varKeepAlive *var = (varKeepAlive *)arg;
+	int socket = initSocketSansPort(var->ip);
+
+	while(1){
+		sleep(TEMPS_KEEP_ALIVE);
+		var->adr = envoieKeepAlive(socket, var->adr);
+	}
+
+	pthread_exit(0);
 }
 
 /**
@@ -584,8 +697,7 @@ adresse* interpretationCmd(
 	type_t cmd, 
 	struct sockaddr_in6 envoyeur,
 	char* msg, 
-	table *t,
-	adresse *carnetAdrServeur){
+	table *t){
 
 	int i, tailleTabIp;
 	info_message infMessage;
@@ -597,7 +709,7 @@ adresse* interpretationCmd(
 		case PUT:
 			printf("PUT\n");
 			// Envoie de l'info aux autres serveurs
-			envoiePutServeur(socket, envoyeur, carnetAdrServeur, msg);
+			envoiePutServeur(socket, envoyeur, msg);
 
 
 			infMessage = decryptageMsg(msg);
@@ -611,6 +723,7 @@ adresse* interpretationCmd(
 			else{
 				insertion_DHT(t, envoyeur.sin6_addr, infMessage.hash);
 			}
+			affiche(t);
 			break;
 		case GET:
 			printf("GET\n");
@@ -627,31 +740,31 @@ adresse* interpretationCmd(
 			// Envoie du msg
 			envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 			break;
-
 		case CONNECT:
 			printf("CONNECT\n");
+
 			// On peut accepter un serveur
 			// Si on a pas de serveur 
-			if (carnetAdrServeur == NULL){
+			if (carnetAdrServeurGlobale == NULL){
 				printf("ACCEPTE_CONNECT\n");
 				msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
-				carnetAdrServeur = malloc(sizeof(adresse));
-				carnetAdrServeur->ip = envoyeur.sin6_addr;
-				carnetAdrServeur->port = envoyeur.sin6_port;
+				carnetAdrServeurGlobale = malloc(sizeof(adresse));
+				carnetAdrServeurGlobale->ip = envoyeur.sin6_addr;
+				carnetAdrServeurGlobale->port = envoyeur.sin6_port;
 
 				// Envoie du msg
 				envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 
 				// On envoie notre table
-				envoieTableHash(socket, carnetAdrServeur, t);
+				envoieTableHash(socket, t);
 			}
-			// On ne peut pas accepter le servur
+			// On ne peut pas accepter le serveur
 			else{
 				// Si la demande vient d'un serveur que l'on a déjà 
 				// dans le carnet d'adresse
-				if (strcmp(ipToString(carnetAdrServeur->ip, adrString1), 
+				if (strcmp(ipToString(carnetAdrServeurGlobale->ip, adrString1), 
 						ipToString(envoyeur.sin6_addr, adrString2)) ==0 
-					&& envoyeur.sin6_port == carnetAdrServeur->port){
+					&& envoyeur.sin6_port == carnetAdrServeurGlobale->port){
 					printf("Meme serveur\n");
 					// On envoie qu'on accepte la connexion
 					msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
@@ -660,7 +773,7 @@ adresse* interpretationCmd(
 					envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 
 					// On envoie notre table
-					envoieTableHash(socket, carnetAdrServeur, t);
+					envoieTableHash(socket, t);
 				}
 				else{
 					printf("DENIED_CONNECT\n");
@@ -673,13 +786,12 @@ adresse* interpretationCmd(
 			break;
 		case DISCONNECT:
 			printf("DISCONNECT\n");
-			if (strcmp(ipToString(carnetAdrServeur->ip, adrString1), 
+			if (strcmp(ipToString(carnetAdrServeurGlobale->ip, adrString1), 
 					ipToString(envoyeur.sin6_addr, adrString2)) ==0 
-				&& envoyeur.sin6_port == carnetAdrServeur->port){
-				printf("Meme serveur\n");
+				&& envoyeur.sin6_port == carnetAdrServeurGlobale->port){
 				// On envoie qu'on accepte la connexion
-				free(carnetAdrServeur);
-				carnetAdrServeur = NULL;
+				free(carnetAdrServeurGlobale);
+				carnetAdrServeurGlobale = NULL;
 			}
 			break;
 		case ACCEPTE_CONNECT:
@@ -688,6 +800,17 @@ adresse* interpretationCmd(
 		case FIN_TRANSMISSION_TABLE:
 			/* rien à faire */
 			break;
+		case ARE_YOU_ALIVE:
+			printf("ARE_YOU_ALIVE\n");
+
+			msgFormat = creationFormat(IM_ALIVE, NULL);
+			// Envoie du message
+			envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			free(msgFormat);
+			break;
+		case IM_ALIVE:
+			/* Rien à faire */
+			break;
 		default:
 			fprintf(stderr, "commande inconnue\n");
 			char ipstr[INET6_ADDRSTRLEN];
@@ -695,7 +818,7 @@ adresse* interpretationCmd(
 			printf("%s\n", ipstr);
 			exit(1);
 	}
-	return carnetAdrServeur;	
+	return carnetAdrServeurGlobale;	
 }
 
 int main(int argc, char* argv[]){
@@ -706,13 +829,15 @@ int main(int argc, char* argv[]){
 
 	struct in6_addr ip;
 	int port, socket;
-	int nbMessage = 5;
+	int nbMessage = 20;
 	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
 	char *msg;
 	table *t;
-	adresse *carnetAdrServeur = NULL;
+	//adresse *carnetAdrServeur = NULL;
+	pthread_t tid;
+	varKeepAlive vKeepAlive;
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
@@ -729,9 +854,9 @@ int main(int argc, char* argv[]){
 
 	// Si il y a des serveurs en option
 	if (argc > 3){
-		carnetAdrServeur = malloc(sizeof(adresse));
+		carnetAdrServeurGlobale = malloc(sizeof(adresse));
 
-		carnetAdrServeur->ip = recuperer_adresse(argv[3]);
+		carnetAdrServeurGlobale->ip = recuperer_adresse(argv[3]);
 
 		if(verification_port(argv[4]) == 0){
 			fprintf(stderr, "Le numéro de port \'%s\' n'est pas \
@@ -739,7 +864,7 @@ int main(int argc, char* argv[]){
 			exit(1);
 		}
 		else{
-			carnetAdrServeur->port = atoi(argv[4]);
+			carnetAdrServeurGlobale->port = atoi(argv[4]);
 		}
 	}
 
@@ -749,32 +874,49 @@ int main(int argc, char* argv[]){
 	socket = initSocketPort(port, ip);
 
 	/** Contacte les serveurs des options */
-	if (carnetAdrServeur != NULL){
-		if (!connexionServeur(socket, carnetAdrServeur)){
-			free(carnetAdrServeur);
-			carnetAdrServeur = NULL;
+	if (carnetAdrServeurGlobale != NULL){
+		if (!connexionServeur(socket, carnetAdrServeurGlobale)){
+			free(carnetAdrServeurGlobale);
+			carnetAdrServeurGlobale = NULL;
 		}
 		else{
 			printf("connexion etablie\n");
 		}
 	}
+	//Creation pthread
+	vKeepAlive.adr = carnetAdrServeurGlobale;
+	vKeepAlive.socket = socket;
+	vKeepAlive.ip = ip;
 
+	if (( pthread_create (&tid , NULL, fctKeepAlive, &vKeepAlive)) != 0){	
+		perror("pthread_create");
+		exit(1);
+	}
+
+    // Ecoute
 	for (i = 0; i < nbMessage; ++i){
-		/** Reception Message */
-		printf("\nAttente message %d\n", i);
+	   
+		printf("\nAttente message %d\n", i);	
+	    /** Reception Message */
 		client = recevoir(socket, buf);
 		printf("Message reçus\n");
 
 		msg = getMsgFromFormat(getTailleFromFormat(buf),buf);
-		carnetAdrServeur = interpretationCmd( socket,
-			getTypeFromFormat(buf), client, msg, t, carnetAdrServeur);
+		carnetAdrServeurGlobale = interpretationCmd( socket,
+			getTypeFromFormat(buf), client, msg, t/*, carnetAdrServeurGlobale*/);
 	}
 
 	// Prévient les autres serveurs qu'il s'arrete.	
-	deconnexionServeur(socket, carnetAdrServeur);
+	deconnexionServeur(socket);
 
 	/** Fermeture */
 	close(port);
-	free(carnetAdrServeur);
+	free(carnetAdrServeurGlobale);
+
+	// Destruction thead
+	if (pthread_kill(tid, SIGINT) != 0){
+		fprintf(stderr, "pthread_kill \n");
+		exit(1);
+	}
 	return 0;
 }

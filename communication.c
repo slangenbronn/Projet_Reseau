@@ -206,6 +206,13 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
     close(sockfd);
 }
 
+/**
+ * @brief envoie un message
+ * @param sockfd socket d'envoie
+ * @param ip ip du destinataire
+ * @param port port du destinataire
+ * @param msg message à envoyer
+ */
 void envoie(int sockfd, struct in6_addr ip, int port, char* msg){
     socklen_t addrlen;
     struct sockaddr_in6 dest;
@@ -422,7 +429,6 @@ info_message decryptageMsg(char* msg){
     return infMsg;
 }
 
-
 /** --Fonction Utile-- */
 /**
  * @brief Transforme une adresse ip en string
@@ -436,19 +442,6 @@ char* ipToString(struct in6_addr ip, char* res){
 	memcpy(res, ipstr, sizeof(ipstr));
 
     return res;
-}
-
-
-/**
- * @brief Transforme une adresse ip en string
- * @param dst destination
- * @param ip ip à transformer
- * @return ip en string
- */
-char* ipToString2(char* dst, struct in6_addr ip){
-    memset(dst,'\0',INET6_ADDRSTRLEN);
-    inet_ntop(AF_INET6, (void*)&(ip), dst, sizeof(dst));
-    return dst;
 }
 
 /**
