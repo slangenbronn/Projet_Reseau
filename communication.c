@@ -30,7 +30,7 @@ int initSocketPort(int port, struct in6_addr ip){
     if((sockfd = socket(AF_INET6,SOCK_DGRAM,IPPROTO_UDP)) == -1)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        exit(INIT_SOCKET);
     }
 
     socklen_t addrlen;
@@ -48,7 +48,7 @@ int initSocketPort(int port, struct in6_addr ip){
     {
         perror("bind"); 
         close(sockfd);
-        exit(EXIT_FAILURE);
+        exit(INIT_SOCKET);
     }
 
     return sockfd;
@@ -66,7 +66,7 @@ int initSocketSansPort(struct in6_addr ip){
     if((sockfd = socket(AF_INET6,SOCK_DGRAM,IPPROTO_UDP)) == -1)
     {
         perror("socket");
-        exit(EXIT_FAILURE);
+        exit(INIT_SOCKET);
     }
 
     socklen_t addrlen;
@@ -83,7 +83,7 @@ int initSocketSansPort(struct in6_addr ip){
     {
         perror("bind"); 
         close(sockfd);
-        exit(EXIT_FAILURE);
+        exit(INIT_SOCKET);
     }
 
     return sockfd;
@@ -111,7 +111,7 @@ void initReception(int sockfd, int port, struct in6_addr ip){
     {
         perror("bind"); 
         close(sockfd);
-        exit(EXIT_FAILURE);
+        exit(INIT_RECEIVE);
     }
 }
 
@@ -137,7 +137,7 @@ struct sockaddr_in6 recevoir(int sockfd, char* buf){
     {
         perror("recvfrom");
         close(sockfd);
-        exit(EXIT_FAILURE);
+        exit(RECEIVE);
     }
 
     return client;
@@ -161,7 +161,7 @@ void recevoirMsg(int port){
     char adr_ip[INET6_ADDRSTRLEN];
     if(inet_ntop(AF_INET6,&client.sin6_addr,adr_ip,INET6_ADDRSTRLEN)==NULL){
         perror("inet_ntop\n");
-        exit(EXIT_FAILURE);
+        exit(RECEIVE);
     }
     printf("Ip source: %s\n",adr_ip);
     printf("Numero de port de l'expediteur: %d\n",client.sin6_port);
@@ -185,7 +185,7 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
     if((sockfd = socket(AF_INET6,SOCK_DGRAM,IPPROTO_UDP)) == -1)
     {
         perror("socket\n");
-        exit(EXIT_FAILURE);
+        exit(SEND);
     }
 
     // init remote addr structure and other params
@@ -199,7 +199,7 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
     {
         perror("sendto\n");
         close(sockfd);
-        exit(EXIT_FAILURE);
+        exit(SEND);
     }
 
     // close the socket
@@ -220,7 +220,7 @@ void envoie(int sockfd, struct in6_addr ip, int port, char* msg){
     if(sendto(sockfd,msg,strlen(msg),0,(struct sockaddr *)&dest,addrlen) == -1){
         perror("sendto\n");
         close(sockfd);
-        exit(EXIT_FAILURE);
+        exit(SEND);
     }
 
     // close the socket
@@ -242,7 +242,7 @@ type_t getTypeFromString(char* string){
     }
     else{
         fprintf(stderr, "type inconnue: %s\n", string);
-        exit(1);
+        exit(TYPE);
     }
 }
 
@@ -266,7 +266,7 @@ char* creationFormat(type_t type, char* message){
     
     if (tailleMsg > TAILLE_MSG_MAX){
         fprintf(stderr, "taille du message trop grand\n");
-        exit(1);
+        exit(FORMAT);
     }
 
     taille = sizeof(type_t) + sizeof(short) + tailleMsg;
@@ -440,18 +440,6 @@ char* ipToString(struct in6_addr ip, char* res){
 
 
 /**
- * @brief Transforme une adresse ip en string
- * @param dst destination
- * @param ip ip à transformer
- * @return ip en string
- */
-char* ipToString2(char* dst, struct in6_addr ip){
-    memset(dst,'\0',INET6_ADDRSTRLEN);
-    inet_ntop(AF_INET6, (void*)&(ip), dst, sizeof(dst));
-    return dst;
-}
-
-/**
  * @brief Donne l'adresse correspondante au host donnée en paramètre
  *
  * @param adresse Host d'on nous voulons l'adresse IPV6
@@ -468,7 +456,7 @@ struct in6_addr recuperer_adresse(char* adresse){
     //Récupération des données de l'adresse dans res
     if (getaddrinfo(adresse, NULL, &hints, &res) != 0) {
         fprintf(stderr, "Adresse ou nom de domaine non correct\n");
-        exit(1);
+        exit(ADRESSE);
     }
 
     //On récupère l'adresse qui est contenu dans la structure res

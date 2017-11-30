@@ -49,7 +49,7 @@ table *init_DHT(){
 
 	if(t == NULL){
 		fprintf(stderr, "Erreur initialisation table hash");
-		exit(1);
+		exit(S_INIT_TABLE);
 	}
 
 	t->premier = NULL;
@@ -518,7 +518,7 @@ int connexionServeur(int socket, adresse *adr){
 	if (strcmp(ipToString(adr->ip, ipString1), 
 			ipToString(serveur.sin6_addr, ipString2)) !=0){
 		fprintf(stderr, "C'est pas la bonne personne\n");
-		exit(1);
+		exit(S_CONNEXION_SERVER);
 	}
 
 	// Regarde si la connexion est accepté
@@ -693,7 +693,7 @@ adresse* interpretationCmd(
 			char ipstr[INET6_ADDRSTRLEN];
 			ipToString(envoyeur.sin6_addr, ipstr);
 			printf("%s\n", ipstr);
-			exit(1);
+			exit(S_UNKNOWN_COMMAND);
 	}
 	return carnetAdrServeur;	
 }
@@ -701,7 +701,7 @@ adresse* interpretationCmd(
 int main(int argc, char* argv[]){
 	if(argc != 3 && argc != 5){
 		printf("usage: %s <adresse> <port> [adresse port [...]]\n", argv[0]);
-		exit(1);
+		exit(S_NB_ARGS);
 	}
 
 	struct in6_addr ip;
@@ -721,7 +721,7 @@ int main(int argc, char* argv[]){
 	if(verification_port(argv[2]) == 0){
 		fprintf(stderr, "Le numéro de port \'%s\' n'est pas \
 		un nombre\n", argv[2]);
-		exit(1);
+		exit(S_NUM_PORT_SERVER);
 	}
 	else{
 		port = atoi(argv[2]);
@@ -736,7 +736,7 @@ int main(int argc, char* argv[]){
 		if(verification_port(argv[4]) == 0){
 			fprintf(stderr, "Le numéro de port \'%s\' n'est pas \
 			un nombre\n", argv[4]);
-			exit(1);
+			exit(S_NUM_PORT_CONNEXION);
 		}
 		else{
 			carnetAdrServeur->port = atoi(argv[4]);
