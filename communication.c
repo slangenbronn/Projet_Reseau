@@ -431,9 +431,9 @@ info_message decryptageMsg(char* msg){
  */
 char* ipToString(struct in6_addr ip, char* res){
     char ipstr[INET6_ADDRSTRLEN];
-	void* addr = &ip;
+    void* addr = &ip;
     inet_ntop(AF_INET6, addr, ipstr, sizeof(ipstr));
-	memcpy(res, ipstr, sizeof(ipstr));
+    memcpy(res, ipstr, sizeof(ipstr));
 
     return res;
 }
@@ -465,7 +465,7 @@ struct in6_addr recuperer_adresse(char* adresse){
     // Libération de la mémoire occupée par les enregistrements
     freeaddrinfo(res);
 
-	return ipv6->sin6_addr;
+    return ipv6->sin6_addr;
 }
 
 /**
@@ -480,9 +480,9 @@ int verification_port(char* port){
     int i;
     int is_number = 1;
     for(i = 0; i < taille; i++){
-	//Vérifie tous les caractère de la chaine pour voir si ce sont tous
-	//des chiffres
-		if(port[i] > '9' || port[i] < '0'){
+    //Vérifie tous les caractère de la chaine pour voir si ce sont tous
+    //des chiffres
+        if(port[i] > '9' || port[i] < '0'){
             is_number = 0;
         }
     }
