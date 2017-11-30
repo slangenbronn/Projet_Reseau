@@ -46,7 +46,10 @@ typedef struct keepAlive{
 	int socket;
 } varKeepAlive;
 
-adresse *carnetAdrServeurGlobaleGlobale;
+
+// Variable
+adresse *carnetAdrServeurGlobale;
+int condPthread;
 
 /**
  * @brief Initialise une table contenant les hash les ip associés 
@@ -517,8 +520,8 @@ void affiche(table* t){
 	    }
 	    else{
 	        printf("Aucune données durant les %d secondes\n", TIME_OUT);
-	        free(carnetAdrServeurGlobaleGlobale);
-			carnetAdrServeurGlobaleGlobale = NULL;
+	        free(carnetAdrServeurGlobale);
+			carnetAdrServeurGlobale = NULL;
 	    }
     }
     
@@ -558,7 +561,7 @@ void envoieTableHash(int socket, table *t){
 		msgFormat = creationFormat(PUT, msg);
 
 		// Envoie du msg
-		envoie(socket, carnetAdrServeurGlobaleGlobale->ip, carnetAdrServeurGlobaleGlobale->port, msgFormat);
+		envoie(socket, carnetAdrServeurGlobale->ip, carnetAdrServeurGlobale->port, msgFormat);
 		free(msgFormat);
 	}
 
@@ -566,7 +569,7 @@ void envoieTableHash(int socket, table *t){
 	printf("Fin transmission table\n");
 	msgFormat = creationFormat(FIN_TRANSMISSION_TABLE, NULL);
 	// Envoie du msg
-	envoie(socket, carnetAdrServeurGlobaleGlobale->ip, carnetAdrServeurGlobaleGlobale->port, msgFormat);
+	envoie(socket, carnetAdrServeurGlobale->ip, carnetAdrServeurGlobale->port, msgFormat);
 }
 
 /**
@@ -637,11 +640,11 @@ int connexionServeur(int socket, adresse *adr){
  */
 void deconnexionServeur(int socket){
 	char* msgFormate;
-	if(carnetAdrServeurGlobaleGlobale != NULL){
+	if(carnetAdrServeurGlobale != NULL){
 		msgFormate = creationFormat(DISCONNECT, NULL);
 
 		// Envoie le message de connexion
-		envoie(socket, carnetAdrServeurGlobaleGlobale->ip, carnetAdrServeurGlobaleGlobale->port, msgFormate);
+		envoie(socket, carnetAdrServeurGlobale->ip, carnetAdrServeurGlobale->port, msgFormate);
 		free(msgFormate);
 	}
 }
@@ -658,13 +661,13 @@ void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur, char* msg){
 		adrString2[INET6_ADDRSTRLEN];
 	char* msgFormat;
 
-	if (carnetAdrServeurGlobaleGlobale != NULL){
+	if (carnetAdrServeurGlobale != NULL){
 		// Vérifie si l'envoyeur n'est pas le serveur auquel on est connecté
-		if (strcmp(ipToString(carnetAdrServeurGlobaleGlobale->ip, adrString1), 
+		if (strcmp(ipToString(carnetAdrServeurGlobale->ip, adrString1), 
 				ipToString(envoyeur.sin6_addr, adrString2)) !=0 
-				|| envoyeur.sin6_port != carnetAdrServeurGlobaleGlobale->port){
+				|| envoyeur.sin6_port != carnetAdrServeurGlobale->port){
 			msgFormat = creationFormat(PUT, msg);
-			envoie(socket, carnetAdrServeurGlobaleGlobale->ip, carnetAdrServeurGlobaleGlobale->port, msgFormat);
+			envoie(socket, carnetAdrServeurGlobale->ip, carnetAdrServeurGlobale->port, msgFormat);
 			free(msgFormat);
 		}
 	}
@@ -680,7 +683,10 @@ void *fctKeepAlive(void *arg){
 
 	while(1){
 		sleep(TEMPS_KEEP_ALIVE);
-		var->adr = envoieKeepAlive(socket, var->adr);
+		if (carnetAdrServeurGlobale != NULL){
+			envoieKeepAlive(socket, carnetAdrServeurGlobale);
+		}
+		printf("pthread\n");
 	}
 
 	pthread_exit(0);
@@ -710,7 +716,7 @@ adresse* interpretationCmd(
 		case PUT:
 			printf("PUT\n");
 			// Envoie de l'info aux autres serveurs
-			envoiePutServeur(socket, envoyeur, carnetAdrServeurGlobale, msg);
+			envoiePutServeur(socket, envoyeur, msg);
 
 
 			infMessage = decryptageMsg(msg);
@@ -756,7 +762,7 @@ adresse* interpretationCmd(
 				envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 
 				// On envoie notre table
-				envoieTableHash(socket, carnetAdrServeurGlobale, t);
+				envoieTableHash(socket, t);
 			}
 			// On ne peut pas accepter le servur
 			else{
@@ -773,7 +779,7 @@ adresse* interpretationCmd(
 					envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 
 					// On envoie notre table
-					envoieTableHash(socket, carnetAdrServeurGlobale, t);
+					envoieTableHash(socket, t);
 				}
 				else{
 					printf("DENIED_CONNECT\n");
@@ -829,7 +835,7 @@ int main(int argc, char* argv[]){
 
 	struct in6_addr ip;
 	int port, socket;
-	int nbMessage = 5;
+	int nbMessage = 20;
 	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
@@ -837,6 +843,7 @@ int main(int argc, char* argv[]){
 	table *t;
 	pthread_t tid;
 	varKeepAlive vKeepAlive;
+	condPthread = 1;
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
@@ -904,8 +911,10 @@ int main(int argc, char* argv[]){
 			getTypeFromFormat(buf), client, msg, t);
 	}
 
+	condPthread = 0;
+
 	// Prévient les autres serveurs qu'il s'arrete.	
-	deconnexionServeur(socket, carnetAdrServeurGlobale);
+	deconnexionServeur(socket);
 
 	/** Fermeture */
 	close(port);
@@ -916,5 +925,6 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "pthread_kill \n");
 		exit(1);
 	}
+	printf("fin\n");
 	return 0;
 }

@@ -13,6 +13,10 @@
 #include <netdb.h>
 #include <time.h>
 
+/** --Temps d'attente-- */
+#define TIME_OUT 15
+#define TEMPS_KEEP_ALIVE 60
+
 /** --Type pour le format de données-- */
 #define TAILLE_MSG_MAX 1024
 enum type {
