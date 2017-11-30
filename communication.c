@@ -206,6 +206,13 @@ void envoieMsg(struct in6_addr ip, int port, char* msg){
     close(sockfd);
 }
 
+/**
+ * @brief envoie un message
+ * @param sockfd socket d'envoie
+ * @param ip ip du destinataire
+ * @param port port du destinataire
+ * @param msg message à envoyer
+ */
 void envoie(int sockfd, struct in6_addr ip, int port, char* msg){
     socklen_t addrlen;
     struct sockaddr_in6 dest;
