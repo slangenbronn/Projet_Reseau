@@ -28,9 +28,6 @@ void interpretationCmd(
     char *msg, *msgFormate;
     char buf[2048];
     int i;
-    fd_set rfds;
-    struct timeval tv;
-    int retval;
     switch(cmd){
         case PUT:
             // Faire format msg
@@ -67,44 +64,23 @@ void interpretationCmd(
             printf("envoie msg\n");
             envoie(socket, ipServeur, port, msgFormate);
 
-            //Initialisation select
-            FD_ZERO(&rfds);
-            FD_SET(socket, &rfds);
-
-            /* Pendant 5 secondes maxi */
-            tv.tv_sec = TIME_OUT;
-            tv.tv_usec = 0;
-
-            retval = select(socket+1, &rfds, NULL, NULL, &tv);
-
-            if (retval == -1){
-                perror("client: select()");
-                exit(1);
-            }
-            else if (retval){
-                printf("Des données sont disponibles maintenant\n");
-                printf("Attend msg\n");
-                recevoir(socket, buf);
-                printf("traite msg\n");
-                // Afficher reponse
-                msg = getMsgFromFormat(
-                    getTailleFromFormat(buf), 
-                    buf);
-                printf("msg: %s\n", msg);
-                info_message infMessage = decryptageMsg(msg);
-
-                printf("hash: %s\n", infMessage.hash);
-                for (i = 0; i < infMessage.taille; ++i){
-                    char ipstr[INET6_ADDRSTRLEN];
-                    ipToString(infMessage.ips[i], ipstr);
-                    printf("\tip%d %s\n", i, ipstr);
-                }
-            }
-            else{
-                printf("Aucune données durant les %d secondes\n", TIME_OUT);
-            }
             // Réception reponse
-            
+            printf("Attend msg\n");
+            recevoir(socket, buf);
+            printf("traite msg\n");
+            // Afficher reponse
+            msg = getMsgFromFormat(
+                getTailleFromFormat(buf), 
+                buf);
+            printf("msg: %s\n", msg);
+            info_message infMessage = decryptageMsg(msg);
+
+            printf("hash: %s\n", infMessage.hash);
+            for (i = 0; i < infMessage.taille; ++i){
+				char ipstr[INET6_ADDRSTRLEN];
+				ipToString(infMessage.ips[i], ipstr);
+                printf("\tip%d %s\n", i, ipstr);
+            }
             close(socket);
             break;
         default:
