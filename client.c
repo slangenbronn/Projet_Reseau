@@ -8,8 +8,6 @@
 #include "communication.h"
 
 
-
-
 /**
  * @brief Réalise les actions associées à la commdande
  * @param cmd commande à réalisé
@@ -28,9 +26,6 @@ void interpretationCmd(
     char *msg, *msgFormate;
     char buf[2048];
     int i;
-    fd_set rfds;
-    struct timeval tv;
-    int retval;
     switch(cmd){
         case PUT:
             // Faire format msg
@@ -67,49 +62,28 @@ void interpretationCmd(
             printf("envoie msg\n");
             envoie(socket, ipServeur, port, msgFormate);
 
-            //Initialisation select
-            FD_ZERO(&rfds);
-            FD_SET(socket, &rfds);
-
-            /* Pendant 5 secondes maxi */
-            tv.tv_sec = TIME_OUT;
-            tv.tv_usec = 0;
-
-            retval = select(socket+1, &rfds, NULL, NULL, &tv);
-
-            if (retval == -1){
-                perror("client: select()");
-                exit(1);
-            }
-            else if (retval){
-                printf("Des données sont disponibles maintenant\n");
-                printf("Attend msg\n");
-                recevoir(socket, buf);
-                printf("traite msg\n");
-                // Afficher reponse
-                msg = getMsgFromFormat(
-                    getTailleFromFormat(buf), 
-                    buf);
-                printf("msg: %s\n", msg);
-                info_message infMessage = decryptageMsg(msg);
-
-                printf("hash: %s\n", infMessage.hash);
-                for (i = 0; i < infMessage.taille; ++i){
-                    char ipstr[INET6_ADDRSTRLEN];
-                    ipToString(infMessage.ips[i], ipstr);
-                    printf("\tip%d %s\n", i, ipstr);
-                }
-            }
-            else{
-                printf("Aucune données durant les %d secondes\n", TIME_OUT);
-            }
             // Réception reponse
-            
+            printf("Attend msg\n");
+            recevoir(socket, buf);
+            printf("traite msg\n");
+            // Afficher reponse
+            msg = getMsgFromFormat(
+                getTailleFromFormat(buf), 
+                buf);
+            printf("msg: %s\n", msg);
+            info_message infMessage = decryptageMsg(msg);
+
+            printf("hash: %s\n", infMessage.hash);
+            for (i = 0; i < infMessage.taille; ++i){
+				char ipstr[INET6_ADDRSTRLEN];
+				ipToString(infMessage.ips[i], ipstr);
+                printf("\tip%d %s\n", i, ipstr);
+            }
             close(socket);
             break;
         default:
             fprintf(stderr, "Type inconnue\n");
-            exit(1);
+            exit(TYPE);
     }
 }
 
@@ -122,7 +96,7 @@ int main(int argc, char **argv){
     // check the number of args on command line
     if(argc < 5 ||   argc > 6){
         printf("USAGE: %s IP PORT COMMANDE HASH [IP]\n", argv[0]);
-        exit(EXIT_FAILURE);
+        exit(C_NB_ARGS);
     }
 
     // get addr from command line and convert it
@@ -131,7 +105,7 @@ int main(int argc, char **argv){
     if(verification_port(argv[2]) == 0){
         fprintf(stderr, "Le numéro de port \'%s\' n'est pas \
         un nombre\n", argv[2]);
-        exit(1);
+        exit(C_NUM_PORT);
     }
     else{
         port_nb = atoi(argv[2]);
@@ -143,7 +117,7 @@ int main(int argc, char **argv){
     // Vérification du hash
     if (verificationHash(argv[4]) == 0){
         fprintf(stderr, "hash incorrecte\n");
-        exit(1);
+        exit(C_HASH);
     }
     // Vérification de l'ip en option
     if (argc >= 6){
