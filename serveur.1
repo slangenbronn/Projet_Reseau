@@ -4,24 +4,74 @@
 serveur \- lance un serveur pouvant stocker des hash et des IP
 .SH SYNOPSYS
 .B serveur 
-.I hote_ipv6 port 
-.B [
-.I h_ip6_connect port_connect
-.B ]
+ipv6 port [ipv6_server port_server]
 .SH DESCRIPTION
-Cree un serveur permettant d'associer des ip a un hash reçus par un client ou
-par un autre serveur. Il permet aussi d'envoyer ses ip et ses hash a d'autres
-serveurs.
+Cree un serveur permettant d'associer des ip a un hash recus par un client ou
+par un autre serveur. Il permet aussi d'envoyer ses IPs et ses hash a la demande.
 .SH PARAMETRES
-.IP hote_ipv6
+.TP 
+.B ipv6
 Le serveur prendra comme adresse IPv6 celle renseignee, ou l'adresse IPv6 de l'hote si un c'est un nom de domaine qui est donne
-.IP port
+.TP 
+.B port
 Numero de port sur lequel le serveur doit envoyer et recevoir des messages
-.IP h_ip6_connect
-Si une autre adresse IPv6 ou un hote est renseigne, alors le serveur ce connectera au serveur possedant cette adresse IPv6. Si une nouvelle adresse est donnee, un numéro de port doit aussi etre renseigne pour etre associe a cette adresse
-.IP port_connect
+.TP 
+.B ipv6_server
+Si une autre adresse IPv6 ou un hote est renseigne, alors le serveur ce connectera au serveur possedant cette adresse IPv6. Si une nouvelle adresse est donnee, un numéro de port doit aussi etre renseigne pour etre associe a cette adresse 
+.TP
+.B port_server
 En renseignant une autre adresse IPv6, il est obligatoire de donnee un nouveau numero de port. Ce dernier sera assigne à l'adresse IPv6 du serveur auquel nous voulons connecter notre serveur
-.SH Auteur
-Ecrit par Sylvain Langenbronn
+.SH EXEMPLES
+.TP
+Lance un serveur ayant comme ip celle de google.fr et le port 6719:
+
+.B serveur
+google.fr 6719
+.PP
+.TP
+Lande un serveur ayant comme ip l'ip local et le port 8000 en se connectant au serveur precedement cree:
+
+.B serveur 
+ip6-localhost 8000 google.fr 6719
+.PP
+Une fois les deux serveurs connectes entre eux, le serveur ayant comme 
+adresse IPv6 google.fr va envoyer toutes sa table de hash au serveur ayant 
+comme adresse IPv6 ip6-localhost
+.SH STATUS DE SORTIE
+.TP 
+S_INIT_TABLE
+Initialisation de la table
+.TP 
+S_CONNEXION_SERVER
+Connexion d'un serveur a un autre
+.TP 
+S_UNKNOWN_COMMAND
+Commande non connu (PUT, GET, ...)
+.TP 
+S_NB_ARGS
+Nombre d'arguments non valide
+.TP 
+S_NUM_PORT_SERVER
+Numero de port pour la creation du serveur incorrect
+.TP 
+S_NUM_PORT_CONNEXION
+Numero de port pour la connexion a un autre serveur incorrect
+.TP
+INIT_SOCKET
+Lors de l'initialisation d'un socket
+.TP
+RECEIVE
+Lors de la reception d'un message
+.TP
+SEND      
+Lors de l'envoi d'un message
+.TP
+FORMAT       
+La chaine utilisee pour cree le format de donnee est trop grande
+.TP
+ADRESSE
+L'adresse IPv6 ou l'hote fourni en paramètre ne fournisse pas d'adresse IPv6 valide
+.SH AUTEUR
+Ecrit par Florian GUILLEMEAU & Sylvain LANGENBRONN
 .SH VOIR AUSSI
-client
+client(1)
