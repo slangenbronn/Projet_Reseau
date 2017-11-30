@@ -548,6 +548,9 @@ int connexionServeur(int socket, adresse *adr){
 	type_t type;
 	char *msgFormate;
 	char ipString1[INET6_ADDRSTRLEN], ipString2[INET6_ADDRSTRLEN];
+	fd_set rfds;
+    struct timeval tv;
+    int retval;
 
 	msgFormate = creationFormat(CONNECT, NULL);
 
@@ -556,22 +559,40 @@ int connexionServeur(int socket, adresse *adr){
 	free(msgFormate);
 
 	// Attend la réponse
-	serveur = recevoir(socket, buf);
+	//Initialisation select
+    FD_ZERO(&rfds);
+    FD_SET(socket, &rfds);
 
+    /* Pendant 5 secondes maxi */
+    tv.tv_sec = TIME_OUT;
+    tv.tv_usec = 0;
 
-	// Vérifie si l'identité du répondeur correspond au serveur
-	if (strcmp(ipToString(adr->ip, ipString1), 
-			ipToString(serveur.sin6_addr, ipString2)) !=0){
-		fprintf(stderr, "C'est pas la bonne personne\n");
-		exit(1);
-	}
+    retval = select(socket+1, &rfds, NULL, NULL, &tv);
+    /* Considérer tv comme indéfini maintenant ! */
 
-	// Regarde si la connexion est accepté
-	type = getTypeFromFormat(buf);
-	if (type == ACCEPTE_CONNECT)
-	{
-		printf("On reçois des trucs\n");
-	}
+    if (retval == -1){
+        perror("connexionServeur: select()");
+    }
+    else if (retval){
+    	printf("Des données sont disponibles maintenant\n");
+    	serveur = recevoir(socket, buf);
+
+		// Vérifie si l'identité du répondeur correspond au serveur
+		if (strcmp(ipToString(adr->ip, ipString1), 
+				ipToString(serveur.sin6_addr, ipString2)) !=0){
+			fprintf(stderr, "C'est pas la bonne personne\n");
+			exit(1);
+		}
+
+		// Regarde si la connexion est accepté
+		type = getTypeFromFormat(buf);
+		if (type == ACCEPTE_CONNECT){
+			printf("On reçois des trucs\n");
+		}
+    }
+    else{
+        printf("Aucune données durant les %d secondes\n", TIME_OUT);
+    }
 
 	return type == ACCEPTE_CONNECT;
 }
@@ -674,6 +695,8 @@ adresse* interpretationCmd(
 			break;
 		case CONNECT:
 			printf("CONNECT\n");
+
+			sleep(30);
 			// On peut accepter un serveur
 			// Si on a pas de serveur 
 			if (carnetAdrServeur == NULL){
@@ -818,7 +841,7 @@ int main(int argc, char* argv[]){
 		}
 		else{
 			printf("connexion etablie\n");
-			envoieKeepAlive(socket, carnetAdrServeur);
+			//envoieKeepAlive(socket, carnetAdrServeur);
 		}
 	}
 
