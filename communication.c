@@ -429,7 +429,6 @@ info_message decryptageMsg(char* msg){
     return infMsg;
 }
 
-
 /** --Fonction Utile-- */
 /**
  * @brief Transforme une adresse ip en string
