@@ -22,7 +22,9 @@ enum type {
 	ACCEPTE_CONNECT, 
 	DENIED_CONNECT, 
 	DISCONNECT, 
-	FIN_TRANSMISSION_TABLE
+	FIN_TRANSMISSION_TABLE,
+	ARE_YOU_ALIVE,
+	IM_ALIVE
 };
 typedef char type_t;
 // +------+--------+---------+
@@ -76,5 +78,3 @@ info_message decryptageMsg(char* msg);
 char* ipToString(struct in6_addr ip, char* res);
 struct in6_addr recuperer_adresse(char* adresse);
 int verification_port(char* port);
-
-//void insertion_hash(char* hash, char* ip6, char** DHT, int taille);

@@ -457,6 +457,51 @@ void test(table *t){
 	affiche(t);
 }
 
+
+/**
+ * @brief Envoie de message keep alive aux serveurs du carnet d'adresse
+ * @param socket socket d'envoie
+ * @param adrServeur carnet d'adresse de serveur
+ */
+ adresse* envoieKeepAlive(int socket, adresse *adrServeur){
+	char* msgFormat;
+	char buf[1024];
+	char adrString1[INET6_ADDRSTRLEN], 
+		adrString2[INET6_ADDRSTRLEN];
+	type_t type;
+	struct sockaddr_in6 envoyeur;
+
+	// Préparation du message
+	msgFormat = creationFormat(ARE_YOU_ALIVE, NULL);
+
+	// Envoie du message
+	envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+
+	// Attend la réponse du serveur
+	envoyeur = recevoir(socket, buf);
+
+	// Si le message que l'on reçois vient du serveur
+	if (strcmp(ipToString(adrServeur->ip, adrString1), 
+		ipToString(envoyeur.sin6_addr, adrString2)) ==0 
+		&& envoyeur.sin6_port == adrServeur->port){
+		// traitement signal
+		type = getTypeFromFormat(buf);
+
+		printf("%d\n", type);
+		//Si il répond qu'il n'est pas vivant
+		if (type != IM_ALIVE){ //----
+			free(adrServeur);
+			adrServeur = NULL;
+			printf("\tpas vivant\n");
+		}
+		else{
+			printf("\tLe serveur est vivant\n");
+		}
+	}
+
+	return adrServeur;
+}
+
 /**
  * @brief Envoie toute sa table de hash 
  * lors d'une premiere connexion avec un autre serveur
@@ -627,7 +672,6 @@ adresse* interpretationCmd(
 			// Envoie du msg
 			envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
 			break;
-
 		case CONNECT:
 			printf("CONNECT\n");
 			// On peut accepter un serveur
@@ -686,6 +730,24 @@ adresse* interpretationCmd(
 			/* Ignorer */
 			break;
 		case FIN_TRANSMISSION_TABLE:
+			/* rien à faire */
+			break;
+		case ARE_YOU_ALIVE:
+			printf("ARE_YOU_ALIVE\n");
+			// On vérifie que l'envoyeur fait partie de notre carnet d'adresse
+			if (strcmp(ipToString(carnetAdrServeur->ip, adrString1), 
+					ipToString(envoyeur.sin6_addr, adrString2)) ==0 
+				&& envoyeur.sin6_port == carnetAdrServeur->port){
+				// On envoie un message de reponse
+				// Préparation du message
+				msgFormat = creationFormat(IM_ALIVE, NULL);
+				printf("IM_ALIVE %d\n", IM_ALIVE);
+				// Envoie du message
+				envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+				free(msgFormat);
+			}
+			break;
+		case IM_ALIVE:
 			/* rien à faire */
 			break;
 		default:
@@ -756,6 +818,7 @@ int main(int argc, char* argv[]){
 		}
 		else{
 			printf("connexion etablie\n");
+			envoieKeepAlive(socket, carnetAdrServeur);
 		}
 	}
 
