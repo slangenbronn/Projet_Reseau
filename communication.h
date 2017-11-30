@@ -16,7 +16,7 @@
 /** --Type pour le format de données-- */
 #define TAILLE_MSG_MAX 1024
 enum type {
-	GET=1, 
+	GET=1,
 	PUT, 
 	CONNECT, 
 	ACCEPTE_CONNECT, 
@@ -24,6 +24,27 @@ enum type {
 	DISCONNECT, 
 	FIN_TRANSMISSION_TABLE
 };
+
+enum error {
+        S_INIT_TABLE=1,
+	S_CONNEXION_SERVER,
+	S_UNKNOWN_COMMAND,
+	S_NB_ARGS,
+	S_NUM_PORT_SERVER,
+	S_NUM_PORT_CONNEXION,
+	C_NB_ARGS,
+	C_NUM_PORT,
+	C_HASH,
+	INIT_SOCKET,
+	INIT_RECEIVE,
+	RECEIVE,
+	SEND,
+	TYPE,
+	FORMAT,
+	ADRESSE
+	
+};
+typedef int error_t;
 typedef char type_t;
 // +------+--------+---------+
 // | TYPE | TAILLE | MESSAGE |
@@ -77,4 +98,3 @@ char* ipToString(struct in6_addr ip, char* res);
 struct in6_addr recuperer_adresse(char* adresse);
 int verification_port(char* port);
 
-//void insertion_hash(char* hash, char* ip6, char** DHT, int taille);

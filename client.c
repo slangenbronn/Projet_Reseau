@@ -8,8 +8,6 @@
 #include "communication.h"
 
 
-
-
 /**
  * @brief Réalise les actions associées à la commdande
  * @param cmd commande à réalisé
@@ -85,7 +83,7 @@ void interpretationCmd(
             break;
         default:
             fprintf(stderr, "Type inconnue\n");
-            exit(1);
+            exit(TYPE);
     }
 }
 
@@ -98,7 +96,7 @@ int main(int argc, char **argv){
     // check the number of args on command line
     if(argc < 5 ||   argc > 6){
         printf("USAGE: %s IP PORT COMMANDE HASH [IP]\n", argv[0]);
-        exit(EXIT_FAILURE);
+        exit(C_NB_ARGS);
     }
 
     // get addr from command line and convert it
@@ -107,7 +105,7 @@ int main(int argc, char **argv){
     if(verification_port(argv[2]) == 0){
         fprintf(stderr, "Le numéro de port \'%s\' n'est pas \
         un nombre\n", argv[2]);
-        exit(1);
+        exit(C_NUM_PORT);
     }
     else{
         port_nb = atoi(argv[2]);
@@ -119,7 +117,7 @@ int main(int argc, char **argv){
     // Vérification du hash
     if (verificationHash(argv[4]) == 0){
         fprintf(stderr, "hash incorrecte\n");
-        exit(1);
+        exit(C_HASH);
     }
     // Vérification de l'ip en option
     if (argc >= 6){
