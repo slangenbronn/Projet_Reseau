@@ -700,6 +700,7 @@ adresse* interpretationCmd(
 			else{
 				insertion_DHT(t, envoyeur.sin6_addr, infMessage.hash);
 			}
+			affiche(t);
 			break;
 		case GET:
 			printf("GET\n");
@@ -707,7 +708,9 @@ adresse* interpretationCmd(
 			free(msg);
 			// On récupère le tableau d'ip associé
 			tailleTabIp = nombre_ip(t, infMessage.hash);
-			tabIp = get_ip(t, infMessage.hash);
+			printf("cbn d'ip %d\n", tailleTabIp);
+			tabIp = get_ip(t, infMessage.hash);//-----------------
+			printf("oui\n");
 
 			// On initialise le message
 			msg = creationMsg(infMessage.hash, tabIp, tailleTabIp);
@@ -863,7 +866,6 @@ int main(int argc, char* argv[]){
 		}
 		else{
 			printf("connexion etablie\n");
-			//envoieKeepAlive(socket, carnetAdrServeur);
 		}
 	}
 

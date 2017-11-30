@@ -14,7 +14,7 @@
 #include <time.h>
 
 /** --Temps d'attente-- */
-#define TIME_OUT 30
+#define TIME_OUT 15
 #define TEMPS_KEEP_ALIVE 60
 
 /** --Type pour le format de données-- */
