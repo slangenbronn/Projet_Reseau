@@ -470,6 +470,9 @@ void test(table *t){
 		adrString2[INET6_ADDRSTRLEN];
 	type_t type;
 	struct sockaddr_in6 envoyeur;
+	fd_set rfds;
+    struct timeval tv;
+    int retval;
 
 	// Préparation du message
 	msgFormat = creationFormat(ARE_YOU_ALIVE, NULL);
@@ -477,27 +480,47 @@ void test(table *t){
 	// Envoie du message
 	envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
 
-	// Attend la réponse du serveur
-	envoyeur = recevoir(socket, buf);
+	//Initialisation select
+    FD_ZERO(&rfds);
+    FD_SET(socket, &rfds);
 
-	// Si le message que l'on reçois vient du serveur
-	if (strcmp(ipToString(adrServeur->ip, adrString1), 
-		ipToString(envoyeur.sin6_addr, adrString2)) ==0 
-		&& envoyeur.sin6_port == adrServeur->port){
-		// traitement signal
-		type = getTypeFromFormat(buf);
+    /* Pendant 5 secondes maxi */
+    tv.tv_sec = TIME_OUT;
+    tv.tv_usec = 0;
 
-		printf("%d\n", type);
-		//Si il répond qu'il n'est pas vivant
-		if (type != IM_ALIVE){ //----
-			free(adrServeur);
-			adrServeur = NULL;
-			printf("\tpas vivant\n");
+    retval = select(socket+1, &rfds, NULL, NULL, &tv);
+    // Attend la réponse du serveur
+    if (retval == -1){
+        perror("connexionServeur: select()");
+    }
+    else if (retval){
+    	printf("Des données sont disponibles maintenant\n");
+    	
+		envoyeur = recevoir(socket, buf);
+
+		// Si le message que l'on reçois vient du serveur
+		if (strcmp(ipToString(adrServeur->ip, adrString1), 
+			ipToString(envoyeur.sin6_addr, adrString2)) ==0 
+			&& envoyeur.sin6_port == adrServeur->port){
+			// traitement signal
+			type = getTypeFromFormat(buf);
+			//Si il répond qu'il n'est pas vivant
+			if (type != IM_ALIVE){ //----
+				free(adrServeur);
+				adrServeur = NULL;
+				printf("\tpas vivant\n");
+			}
+			else{
+				printf("\tLe serveur est vivant\n");
+			}
 		}
-		else{
-			printf("\tLe serveur est vivant\n");
-		}
-	}
+    }
+    else{
+        printf("Aucune données durant les %d secondes\n", TIME_OUT);
+        free(adrServeur);
+		adrServeur = NULL;
+    }
+	
 
 	return adrServeur;
 }
@@ -696,7 +719,6 @@ adresse* interpretationCmd(
 		case CONNECT:
 			printf("CONNECT\n");
 
-			sleep(30);
 			// On peut accepter un serveur
 			// Si on a pas de serveur 
 			if (carnetAdrServeur == NULL){
@@ -712,7 +734,7 @@ adresse* interpretationCmd(
 				// On envoie notre table
 				envoieTableHash(socket, carnetAdrServeur, t);
 			}
-			// On ne peut pas accepter le servur
+			// On ne peut pas accepter le serveur
 			else{
 				// Si la demande vient d'un serveur que l'on a déjà 
 				// dans le carnet d'adresse
