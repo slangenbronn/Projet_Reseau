@@ -4,16 +4,6 @@
  */
 
 #include "communication.h"
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <stdlib.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <string.h>
 
 /** --Fonction de vérification du hash-- */
 /**
@@ -264,12 +254,16 @@ type_t getTypeFromString(char* string){
  */
 char* creationFormat(type_t type, char* message){
     char* buf;
-    short tailleMsg = strlen(message);
+    short tailleMsg = 0;
     char ty[1];
     char tai[2];
     short taille; 
     int index = 0;
 
+    if (message != NULL){
+        tailleMsg = strlen(message);
+    }
+    
     if (tailleMsg > TAILLE_MSG_MAX){
         fprintf(stderr, "taille du message trop grand\n");
         exit(1);
@@ -435,11 +429,26 @@ info_message decryptageMsg(char* msg){
  * @param ip ip à transformer
  * @return ip en string
  */
-void ipToString(struct in6_addr ip, char* res){
+char* ipToString(struct in6_addr ip, char* res){
     char ipstr[INET6_ADDRSTRLEN];
 	void* addr = &ip;
     inet_ntop(AF_INET6, addr, ipstr, sizeof(ipstr));
 	memcpy(res, ipstr, sizeof(ipstr));
+
+    return res;
+}
+
+
+/**
+ * @brief Transforme une adresse ip en string
+ * @param dst destination
+ * @param ip ip à transformer
+ * @return ip en string
+ */
+char* ipToString2(char* dst, struct in6_addr ip){
+    memset(dst,'\0',INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6, (void*)&(ip), dst, sizeof(dst));
+    return dst;
 }
 
 /**
@@ -469,7 +478,6 @@ struct in6_addr recuperer_adresse(char* adresse){
     freeaddrinfo(res);
 
 	return ipv6->sin6_addr;
-
 }
 
 /**

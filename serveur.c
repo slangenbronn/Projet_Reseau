@@ -5,17 +5,7 @@
  * ./pg_name IPv4_addr port_number
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netdb.h>
 #include "communication.h"
-#include <netinet/in.h>
-#include <time.h>
 
 #define MAX_CONNEXION 10
 
@@ -112,8 +102,10 @@ int existence_couple(table* t, char* hash, struct in6_addr ip){
 
 	int trouve = 0;
 	table_hash* temp_hash = existence_hash(t, hash);
+	//Pour enregister l'ip en chaine
 	char ipstr[INET6_ADDRSTRLEN];
 	ipToString(ip, ipstr);
+	//Pour enregistrer les ip de la table en chaine
 	char tempstr[INET6_ADDRSTRLEN];
 
 	//Si le hash à été trouvé dans la table
@@ -124,6 +116,8 @@ int existence_couple(table* t, char* hash, struct in6_addr ip){
 		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
 		while(temp_ip != NULL && trouve == 0){
 			ipToString(temp_ip->ip, tempstr);
+			//Comparaison de l'ip donnée en paramètre de la fonction
+			//Et les ip trouvés dans la table
 			if(strcmp(tempstr, ipstr)==0){ 
 				trouve = 1;
 			}
@@ -151,6 +145,7 @@ int nombre_ip(table* t, char* hash){
 	table_hash* temp_h = existence_hash(t, hash);
 	if(temp_h != NULL){
 		table_ip* temp_ip = temp_h->t_ip;
+		//Parcours de la liste des ip
 		while(temp_ip != NULL){
 			nb_ip++;
 			temp_ip = temp_ip->ip_suivant;
@@ -158,6 +153,40 @@ int nombre_ip(table* t, char* hash){
 	}
 
 	return nb_ip;
+}
+
+
+/** 
+ * @brief Remet le compteur de temps de l'ip associé au hash à 0
+ *
+ * @param t Liste contenant les ip et les hash
+ * @param hash Valeur du hash dans laquelle est enregsitré l'ip
+ * @param ip IP que dont l'on veut remettre le timer à 0
+ */
+void reset_timer(table* t, char* hash, struct in6_addr ip){
+	
+	table_hash* temp_h = existence_hash(t, hash);
+	//Pour enregistrer l'ip en chaine
+	char ipstr[INET6_ADDRSTRLEN];
+	ipToString(ip, ipstr);
+	//Pour enregistrer les ip trouvé dans la liste en chaine
+	char tempstr[INET6_ADDRSTRLEN];
+
+	if(temp_h != NULL){
+		table_ip* temp_ip = temp_h->t_ip;
+		while(temp_ip != NULL){
+			ipToString(ip, tempstr);
+			//Comparaison de l'ip passé en paramètre de la fonction
+			//et des ip trouvés dans la liste
+			if(strcmp(ipstr, tempstr) == 0){
+				time(&temp_ip->t_inser);
+				temp_ip = NULL;
+			}
+			else{
+				temp_ip = temp_ip->ip_suivant;
+			}
+		}
+	}
 }
 
 
@@ -192,10 +221,17 @@ void insertion_DHT(table *t, struct in6_addr ip, char* hash){
 	}
 	//Si la valeur du hash est trouvé dans la liste on y ajoute juste l'ip
 	else{
-		//On fait pointer la valeur suivant sur l'ancien premier ip
-		nouveau_ip->ip_suivant = temp->t_ip;
-		//On ajoute le nouvel ip en début de liste
-		temp->t_ip = nouveau_ip;
+		//Si l'ip est déjà enregistré dans la table de hash
+		if(existence_couple(t, hash, ip) == 1){
+			//On remet son conteur de temps à 0
+			reset_timer(t, hash, ip);
+		}
+		else{
+			//On fait pointer la valeur suivant sur l'ancien premier ip
+			nouveau_ip->ip_suivant = temp->t_ip;
+			//On ajoute le nouvel ip en début de liste
+			temp->t_ip = nouveau_ip;
+		}
 	}
 }
 
@@ -253,6 +289,12 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 	int trouve = 0;
 	table_hash* temp_hash = existence_hash(t, hash);
 
+	//On enregistre l'ip en chaine
+	char ipstr[INET6_ADDRSTRLEN];
+	ipToString(ip, ipstr);
+	//Pour enregistrer les ip trouvés dans la liste en chaine
+	char tempstr[INET6_ADDRSTRLEN];
+
 	//Si le hash à été trouvé dans la table
 	if(temp_hash != NULL){
 		//On cherche l'ip
@@ -261,11 +303,10 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 		//On continue de chercher tant que l'on a pas atteint la fin
 		//de la list des ip de ce hash ou que l'ip voulu n'a pas été trouvé
 		while(temp_ip != NULL && trouve == 0){
-			char ipstr1[INET6_ADDRSTRLEN];
-			char ipstr2[INET6_ADDRSTRLEN];
-			ipToString(temp_ip->ip, ipstr1);
-			ipToString(ip, ipstr2);
-			if(strcmp(ipstr1, ipstr2) == 0){
+			ipToString(temp_ip->ip, tempstr);
+			//Comparaison de l'ip passé en paramètre
+			//et les ip de la liste
+			if(strcmp(ipstr, tempstr) == 0){
 				trouve = 1;
 			}
 			else{
@@ -311,7 +352,10 @@ void supprimer_ip(table* t, char* hash, struct in6_addr ip){
 int ip_valide(table_ip* ip){
 
 	time_t end;
+	//On initialise un timer avec l'heure actuelle
 	time(&end);
+	//On la compare avec l'heure de l'insertion de l'ip
+	//Si la différence entre les deux est de plus de 30s
 	if(difftime(end, ip->t_inser) >= 30){
 		return 0;
 	}
@@ -325,19 +369,20 @@ int ip_valide(table_ip* ip){
  *
  * @param t Table contenant les hash et les ip associés
  */
-void validite_ip(table* t){
+void nettoyage_ip(table* t, char* hash){
 
-	table_hash* temp_h = t->premier;
+	table_hash* temp_h = existence_hash(t, hash);
 	table_ip* temp_ip = temp_h->t_ip;
 
-	while(temp_h != NULL){
+	if(temp_h != NULL){
 		while(temp_ip != NULL){
+			//On vérifie que les ip ne sont pas obsolètes
 			if(ip_valide(temp_ip) == 0){
+				//On les supprime si elle le sont
 				supprimer_ip(t, temp_h->hash, temp_ip->ip);
 			}
 			temp_ip = temp_ip->ip_suivant;
 		}
-		temp_h = temp_h->hash_suivant;
 	}
 }
 
@@ -353,15 +398,18 @@ struct in6_addr* get_ip(table* t, char* hash){
 
 	table_hash* temp_h = existence_hash(t, hash);
 	struct in6_addr* table_ip6;
+	//On supprime les ip du hash qui sont obsolètes
+	nettoyage_ip(t, hash);
 	if(temp_h != NULL){
+		//On calcul le nombre de d'ip pour ce hash
 		int taille = nombre_ip(t, hash);
-		int i = 0;
+		int i;
 		table_ip6 = malloc(sizeof(struct in6_addr)*taille);
+		//Puis on enregistre toutes les ip associès à ce hash dans une table
 		table_ip* temp_ip = temp_h->t_ip;
-		while(temp_ip != NULL){
+		for(i = 0; i < taille; i++){
 			table_ip6[i] = temp_ip->ip;
 			temp_ip = temp_ip->ip_suivant;
-			i++;
 		}
 	}
 
@@ -377,16 +425,20 @@ void affiche(table* t){
 	
 	table_hash* temp_h = t->premier;
 	table_ip* temp_ip = temp_h->t_ip;
+	char ipstr[INET6_ADDRSTRLEN];
 
 	while(temp_h != NULL){
+		//Quand on rencontre un nouveau hash on l'affiche
 		printf("--- Hash : %s ---\n", temp_h->hash);
+		//Et on affiche toutes ces ip
 		while(temp_ip != NULL){
-			char ipstr[INET6_ADDRSTRLEN];
 			ipToString(temp_ip->ip, ipstr);
 			printf("ip : %s\n", ipstr);
 			temp_ip = temp_ip->ip_suivant;
 		}
 		temp_h = temp_h->hash_suivant;
+		//Si nous n'avons pas atteint la fin de la liste des hash
+		//On passe à la table d'ip du hash suivant
 		if(temp_h != NULL){
 			temp_ip = temp_h->t_ip;
 		}
@@ -401,13 +453,124 @@ void test(table *t){
 	insertion_DHT(t, recuperer_adresse("::1"), "456");
 	insertion_DHT(t, recuperer_adresse("::1"), "21");
 	insertion_DHT(t, recuperer_adresse("google.fr"), "456");
+	insertion_DHT(t, recuperer_adresse("::1"), "456");
 	affiche(t);
 }
 
+/**
+ * @brief Envoie toute sa table de hash 
+ * lors d'une premiere connexion avec un autre serveur
+ * @param socket socket d'envoie
+ * @param adresse du serveur
+ * @param t table de hash
+ */
+void envoieTableHash(int socket, adresse *adrServeur, table *t){
+	int tailleTabIp=0;
+	struct in6_addr* tabIp;
+	table_hash *temp;
+	char *msg, *msgFormat;
 
-/*void connexionServeur(int socket, adresse *adr){
-	msgFormate = creationFormat(cmd, msg);
-}*/
+	for (temp = t->premier; temp != NULL; temp = temp->hash_suivant){
+		tailleTabIp = nombre_ip(t, temp->hash);
+		tabIp = get_ip(t, temp->hash);
+
+		printf("hash %s\n", temp->hash);
+		// On initialise le message
+		msg = creationMsg(temp->hash, tabIp, tailleTabIp);
+		msgFormat = creationFormat(PUT, msg);
+
+		// Envoie du msg
+		envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+		free(msgFormat);
+	}
+
+	// Envoie de message fin de transmission table
+	printf("Fin transmission table\n");
+	msgFormat = creationFormat(FIN_TRANSMISSION_TABLE, NULL);
+	// Envoie du msg
+	envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+}
+
+/**
+ * @brief établie une connexion avec le serveur
+ * @param socket socket de communication
+ * @param adr adresse du serveur à contacter
+ * @return 1 si connexion étable sinon 0
+ */
+int connexionServeur(int socket, adresse *adr){
+	char buf[2048];
+	struct sockaddr_in6 serveur;
+	type_t type;
+	char *msgFormate;
+	char ipString1[INET6_ADDRSTRLEN], ipString2[INET6_ADDRSTRLEN];
+
+	msgFormate = creationFormat(CONNECT, NULL);
+
+	// Envoie le message de connexion
+	envoie(socket, adr->ip, adr->port, msgFormate);
+	free(msgFormate);
+
+	// Attend la réponse
+	serveur = recevoir(socket, buf);
+
+
+	// Vérifie si l'identité du répondeur correspond au serveur
+	if (strcmp(ipToString(adr->ip, ipString1), 
+			ipToString(serveur.sin6_addr, ipString2)) !=0){
+		fprintf(stderr, "C'est pas la bonne personne\n");
+		exit(1);
+	}
+
+	// Regarde si la connexion est accepté
+	type = getTypeFromFormat(buf);
+	if (type == ACCEPTE_CONNECT)
+	{
+		printf("On reçois des trucs\n");
+	}
+
+	return type == ACCEPTE_CONNECT;
+}
+
+/**
+ * @brief déconnexion d'un serveur
+ * @param socket d'envoie
+ * @param adrServeur adresseur du serveur connecté
+ */
+void deconnexionServeur(int socket, adresse* adrServeur){
+	char* msgFormate;
+	if(adrServeur != NULL){
+		msgFormate = creationFormat(DISCONNECT, NULL);
+
+		// Envoie le message de connexion
+		envoie(socket, adrServeur->ip, adrServeur->port, msgFormate);
+		free(msgFormate);
+	}
+}
+
+/**
+ * @brief Envoie des nouvelles données reçus aux autres serveurs
+ * @param socket socket d'envoie
+ * @param envoyeur personne ayant envoyé le put
+ * @param adrServeur carnet d'adresse de serveur
+ * @param msg message reçus
+ */
+void envoiePutServeur(int socket, struct sockaddr_in6 envoyeur, 
+	adresse *adrServeur, char* msg){
+	char adrString1[INET6_ADDRSTRLEN], 
+		adrString2[INET6_ADDRSTRLEN];
+	char* msgFormat;
+
+	if (adrServeur != NULL){
+		// Vérifie si l'envoyeur n'est pas le serveur auquel on est connecté
+		if (strcmp(ipToString(adrServeur->ip, adrString1), 
+				ipToString(envoyeur.sin6_addr, adrString2)) !=0 
+				|| envoyeur.sin6_port != adrServeur->port){
+			msgFormat = creationFormat(PUT, msg);
+			envoie(socket, adrServeur->ip, adrServeur->port, msgFormat);
+			free(msgFormat);
+		}
+	}
+}
 
 /**
  * @brief Interprete la commande
@@ -416,19 +579,27 @@ void test(table *t){
  * @param msg message reçus
  * @param t table de hash 
  */
-void interpretationCmd(type_t cmd, 
+adresse* interpretationCmd(
+	int socket,
+	type_t cmd, 
 	struct sockaddr_in6 envoyeur,
 	char* msg, 
-	table *t){
+	table *t,
+	adresse *carnetAdrServeur){
 
 	int i, tailleTabIp;
 	info_message infMessage;
 	struct in6_addr* tabIp;
 	char* msgFormat;
+	char adrString1[INET6_ADDRSTRLEN], adrString2[INET6_ADDRSTRLEN];
 
 	switch(cmd){
 		case PUT:
 			printf("PUT\n");
+			// Envoie de l'info aux autres serveurs
+			envoiePutServeur(socket, envoyeur, carnetAdrServeur, msg);
+
+
 			infMessage = decryptageMsg(msg);
 
 			if (infMessage.taille != 0){
@@ -454,7 +625,68 @@ void interpretationCmd(type_t cmd,
 			msgFormat = creationFormat(PUT, msg);
 
 			// Envoie du msg
-			envoieMsg(envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+			break;
+
+		case CONNECT:
+			printf("CONNECT\n");
+			// On peut accepter un serveur
+			// Si on a pas de serveur 
+			if (carnetAdrServeur == NULL){
+				printf("ACCEPTE_CONNECT\n");
+				msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
+				carnetAdrServeur = malloc(sizeof(adresse));
+				carnetAdrServeur->ip = envoyeur.sin6_addr;
+				carnetAdrServeur->port = envoyeur.sin6_port;
+
+				// Envoie du msg
+				envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+
+				// On envoie notre table
+				envoieTableHash(socket, carnetAdrServeur, t);
+			}
+			// On ne peut pas accepter le servur
+			else{
+				// Si la demande vient d'un serveur que l'on a déjà 
+				// dans le carnet d'adresse
+				if (strcmp(ipToString(carnetAdrServeur->ip, adrString1), 
+						ipToString(envoyeur.sin6_addr, adrString2)) ==0 
+					&& envoyeur.sin6_port == carnetAdrServeur->port){
+					printf("Meme serveur\n");
+					// On envoie qu'on accepte la connexion
+					msgFormat = creationFormat(ACCEPTE_CONNECT, NULL);
+
+					// Envoie du msg
+					envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+
+					// On envoie notre table
+					envoieTableHash(socket, carnetAdrServeur, t);
+				}
+				else{
+					printf("DENIED_CONNECT\n");
+					msgFormat = creationFormat(DENIED_CONNECT, NULL);
+
+					// Envoie du msg
+					envoie(socket, envoyeur.sin6_addr, envoyeur.sin6_port, msgFormat);
+				}
+			}			
+			break;
+		case DISCONNECT:
+			printf("DISCONNECT\n");
+			if (strcmp(ipToString(carnetAdrServeur->ip, adrString1), 
+					ipToString(envoyeur.sin6_addr, adrString2)) ==0 
+				&& envoyeur.sin6_port == carnetAdrServeur->port){
+				printf("Meme serveur\n");
+				// On envoie qu'on accepte la connexion
+				free(carnetAdrServeur);
+				carnetAdrServeur = NULL;
+			}
+			break;
+		case ACCEPTE_CONNECT:
+			/* Ignorer */
+			break;
+		case FIN_TRANSMISSION_TABLE:
+			/* rien à faire */
 			break;
 		default:
 			fprintf(stderr, "commande inconnue\n");
@@ -462,7 +694,8 @@ void interpretationCmd(type_t cmd,
 			ipToString(envoyeur.sin6_addr, ipstr);
 			printf("%s\n", ipstr);
 			exit(1);
-	}	
+	}
+	return carnetAdrServeur;	
 }
 
 int main(int argc, char* argv[]){
@@ -472,15 +705,14 @@ int main(int argc, char* argv[]){
 	}
 
 	struct in6_addr ip;
-	int port;
-	int nbMessage = 3;
-	int socket;
+	int port, socket;
+	int nbMessage = 5;
 	int i;
 	struct sockaddr_in6 client;
 	char buf[1024];
 	char *msg;
 	table *t;
-	adresse *carnetAdrServeur = malloc(sizeof(adresse));
+	adresse *carnetAdrServeur = NULL;
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
@@ -497,6 +729,8 @@ int main(int argc, char* argv[]){
 
 	// Si il y a des serveurs en option
 	if (argc > 3){
+		carnetAdrServeur = malloc(sizeof(adresse));
+
 		carnetAdrServeur->ip = recuperer_adresse(argv[3]);
 
 		if(verification_port(argv[4]) == 0){
@@ -511,13 +745,19 @@ int main(int argc, char* argv[]){
 
 	t = init_DHT();
 
-	test(t);
-	//return 0;
-
 	/** Initialisation */
 	socket = initSocketPort(port, ip);
 
 	/** Contacte les serveurs des options */
+	if (carnetAdrServeur != NULL){
+		if (!connexionServeur(socket, carnetAdrServeur)){
+			free(carnetAdrServeur);
+			carnetAdrServeur = NULL;
+		}
+		else{
+			printf("connexion etablie\n");
+		}
+	}
 
 	for (i = 0; i < nbMessage; ++i){
 		/** Reception Message */
@@ -526,9 +766,13 @@ int main(int argc, char* argv[]){
 		printf("Message reçus\n");
 
 		msg = getMsgFromFormat(getTailleFromFormat(buf),buf);
-		interpretationCmd(getTypeFromFormat(buf), client, msg, t);
+		carnetAdrServeur = interpretationCmd( socket,
+			getTypeFromFormat(buf), client, msg, t, carnetAdrServeur);
 	}
-	
+
+	// Prévient les autres serveurs qu'il s'arrete.	
+	deconnexionServeur(socket, carnetAdrServeur);
+
 	/** Fermeture */
 	close(port);
 	free(carnetAdrServeur);

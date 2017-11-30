@@ -6,14 +6,6 @@
  */
 
 #include "communication.h"
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <stdlib.h>
-#include <string.h>
-#include <arpa/inet.h>
 
 
 
@@ -52,12 +44,7 @@ void interpretationCmd(
             }
             // Encapsuler message
             msgFormate = creationFormat(cmd, msg);
-            //printf("msg format: %s\n", msgFormate);
-            
 
-            int tailleMsg = getTailleFromFormat(msgFormate);
-            printf("taille %d\n", tailleMsg);
-            printf("msg: %s\n", getMsgFromFormat(tailleMsg, msgFormate));
             // Envoyer msg
             envoieMsg(ipServeur, port, msgFormate);
             printf("fin put\n");
