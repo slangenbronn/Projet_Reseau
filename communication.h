@@ -13,8 +13,6 @@
 #include <netdb.h>
 #include <time.h>
 
-
-
 /** --Temps d'attente-- */
 #define TIME_OUT 15
 #define TEMPS_KEEP_ALIVE 60
