@@ -879,7 +879,7 @@ void sigInt(__attribute__((unused))int sig){
 
 int main(int argc, char* argv[]){
 	if(argc != 3 && argc != 5){
-		printf("usage: %s <adresse> <port> [adresse port [...]]\n", argv[0]);
+		printf("usage: %s <adresse> <port> [adresse port]\n", argv[0]);
 		exit(S_NB_ARGS);
 	}
 

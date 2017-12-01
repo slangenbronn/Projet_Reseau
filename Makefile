@@ -13,6 +13,11 @@ serveur: serveur.c
 
 communication.o: communication.h
 
+test: test-sans-valgrind
+
+test-sans-valgrind: all
+	@for i in test-*.sh ; do echo $$i ; sh $$i || exit 1 ; done
+
 clean:
 	rm -f *.o $(PROGS)
 	rm -f *.gc*
