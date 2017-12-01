@@ -49,7 +49,7 @@ typedef struct keepAlive{
 
 // Variable
 adresse *carnetAdrServeurGlobale;
-int condPthread;
+volatile sig_atomic_t sigIntIn = 0;
 
 /**
  * @brief Initialise une table contenant les hash les ip associés 
@@ -497,7 +497,7 @@ void affiche(table* t){
 	    retval = select(socket+1, &rfds, NULL, NULL, &tv);
 	    // Attend la réponse du serveur
 	    if (retval == -1){
-	        perror("connexionServeur: select()");
+	        perror("envoieKeepAlive: select()");
 	    }
 	    else if (retval){
 			envoyeur = recevoir(socket, buf);
@@ -519,7 +519,9 @@ void affiche(table* t){
 			}
 	    }
 	    else{
-	        printf("Aucune données durant les %d secondes\n", TIME_OUT);
+	        printf(
+	        	"envoieKeepAlive: Aucune données durant les %d secondes\n",
+	        	TIME_OUT);
 	        free(carnetAdrServeurGlobale);
 			carnetAdrServeurGlobale = NULL;
 	    }
@@ -681,12 +683,13 @@ void *fctKeepAlive(void *arg){
 	varKeepAlive *var = (varKeepAlive *)arg;
 	int socket = initSocketSansPort(var->ip);
 
-	while(1){
+	while(!sigIntIn){
 		sleep(TEMPS_KEEP_ALIVE);
+		printf("pthread\n");
 		if (carnetAdrServeurGlobale != NULL){
 			envoieKeepAlive(socket, carnetAdrServeurGlobale);
 		}
-		printf("pthread\n");
+		
 	}
 
 	pthread_exit(0);
@@ -827,6 +830,53 @@ adresse* interpretationCmd(
 	return carnetAdrServeurGlobale;	
 }
 
+
+/**
+ * @brief fonction du serveur
+ * @param socket socket d'envoie
+ * @param t table de hash
+ */
+void fonctionServeur(int socket, table *t){
+	char buf[2048];
+	char* msg;
+	struct sockaddr_in6 client;
+	fd_set rfds;
+    struct timeval tv;
+    int retval;
+
+    /* Pendant TIME_OUT secondes maxi */
+    tv.tv_sec = TIME_OUT;
+    tv.tv_usec = 0;
+
+
+	FD_ZERO(&rfds);
+	FD_SET(socket, &rfds);
+	
+	retval = select(socket+1, &rfds, NULL, NULL, &tv);
+
+	if (retval == -1){
+	    perror("connexionServeur: select()");
+	}
+	else if (retval){	
+	  	/** Reception Message */
+		client = recevoir(socket, buf);
+		printf("Message reçus\n");
+
+		msg = getMsgFromFormat(getTailleFromFormat(buf),buf);
+		interpretationCmd( socket,
+			getTypeFromFormat(buf), client, msg, t);
+		free(msg);
+			
+	}
+	else{
+	    printf("Aucune données durant les %d secondes\n", TIME_OUT);
+	}
+}
+
+void sigInt(__attribute__((unused))int sig){
+	sigIntIn = 1;
+}
+
 int main(int argc, char* argv[]){
 	if(argc != 3 && argc != 5){
 		printf("usage: %s <adresse> <port> [adresse port [...]]\n", argv[0]);
@@ -835,14 +885,12 @@ int main(int argc, char* argv[]){
 
 	struct in6_addr ip;
 	int port, socket;
-	int nbMessage = 20;
+	//int nbMessage = 20;
 	int i;
-	struct sockaddr_in6 client;
-	char buf[1024];
-	char *msg;
 	table *t;
 	pthread_t tid;
 	varKeepAlive vKeepAlive;
+	struct sigaction sint;
 	condPthread = 1;
 
 	//Récupèration de l'adresse donnée en paramètre si elle existe
@@ -899,19 +947,19 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 
+	// Mise en place du nouveau signal sigint
+	sint.sa_handler = sigInt;
+	sint.sa_flags = 0;
+	sigemptyset(&sint.sa_mask);
+	sigaddset(&sint.sa_mask, SIGQUIT);
+	sigaction(SIGINT, &sint, NULL);
+
     // Ecoute
-	for (i = 0; i < nbMessage; ++i){
-		/** Reception Message */
+	i = 0;
+	while(!sigIntIn){
 		printf("\nAttente message %d\n", i);
-		client = recevoir(socket, buf);
-		printf("Message reçus\n");
-
-		msg = getMsgFromFormat(getTailleFromFormat(buf),buf);
-		carnetAdrServeurGlobale = interpretationCmd( socket,
-			getTypeFromFormat(buf), client, msg, t);
+		fonctionServeur(socket, t);
 	}
-
-	condPthread = 0;
 
 	// Prévient les autres serveurs qu'il s'arrete.	
 	deconnexionServeur(socket);
