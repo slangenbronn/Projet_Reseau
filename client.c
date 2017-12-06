@@ -28,16 +28,12 @@ void interpretationCmd(
     int i;
     switch(cmd){
         case PUT:
-            // Faire format msg
             // Si ipAssocié est null
             if (ipAssocie != NULL){
-                printf("ipAssocie non null\n");
                 msg = creationMsg(hash, ipAssocie, 1);
             }
             // Si ipAssocié n'est pas null
             else{
-                //msg = hash;
-                printf("ipAssocie null\n");
                 msg = creationMsg(hash, NULL, 0);
             }
             // Encapsuler message
@@ -45,7 +41,6 @@ void interpretationCmd(
 
             // Envoyer msg
             envoieMsg(ipServeur, port, msgFormate);
-            printf("fin put\n");
             break;
         case GET:
             // Faire msg
@@ -58,7 +53,6 @@ void interpretationCmd(
             int socket = initSocketSansPort(in6addr_any);
 
             // Envoyer msg
-            //envoieMsg(ipServeur, port, msgFormate);
             printf("envoie msg\n");
             envoie(socket, ipServeur, port, msgFormate);
 
@@ -66,10 +60,8 @@ void interpretationCmd(
             printf("Attend msg\n");
             recevoir(socket, buf);
 
-            printf("\ntraite msg\n");
             // Afficher reponse
             info_message infMessage = decryptageMsg(msg);
-
             printf("hash: %s\n", infMessage.hash);
             for (i = 0; i < infMessage.taille; ++i){
 				char ipstr[INET6_ADDRSTRLEN];
