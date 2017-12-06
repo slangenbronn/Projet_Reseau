@@ -2,11 +2,14 @@ COV = -coverage
 
 CFLAGS = -g -Wall -Wextra -Werror $(COVERAGE)
 
-PROGS = serveur client
+PROGS = client
 
-all: $(PROGS)
+all: $(PROGS) serveur
 
 $(PROGS): communication.o
+
+serveur: serveur.c
+	cc -g -Wall -Wextra -Werror $(COVERAGE) serveur.c communication.o -o serveur -l pthread
 
 communication.o: communication.h
 
