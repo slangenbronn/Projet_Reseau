@@ -205,9 +205,6 @@ void envoie(int sockfd, struct in6_addr ip, int port, char* msg){
         close(sockfd);
         exit(SEND);
     }
-
-    // close the socket
-    //close(sockfd);
 }
 
 /** --Format de données-- */

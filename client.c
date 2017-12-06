@@ -65,12 +65,9 @@ void interpretationCmd(
             // Réception reponse
             printf("Attend msg\n");
             recevoir(socket, buf);
-            printf("traite msg\n");
+
+            printf("\ntraite msg\n");
             // Afficher reponse
-            msg = getMsgFromFormat(
-                getTailleFromFormat(buf), 
-                buf);
-            printf("msg: %s\n", msg);
             info_message infMessage = decryptageMsg(msg);
 
             printf("hash: %s\n", infMessage.hash);

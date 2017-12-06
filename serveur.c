@@ -891,8 +891,7 @@ int main(int argc, char* argv[]){
 	pthread_t tid;
 	varKeepAlive vKeepAlive;
 	struct sigaction sint;
-	condPthread = 1;
-
+	
 	//Récupèration de l'adresse donnée en paramètre si elle existe
 	ip = recuperer_adresse(argv[1]);
 
