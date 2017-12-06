@@ -1,9 +1,5 @@
 # Projet de réseau 2017
 
-## Auteur
-* Florian GUILLEMEAU
-* Sylvain LANGENBRONN
-
 ## Format des trames envoyées:
 | TYPE | TAILLE | MESSAGE |
 |------|--------|---------|
@@ -12,3 +8,7 @@
 ## Format des messages:
 | Hash | séparteur hash ip | ip | séparateur ip | ... |
 |------|-------------------|----|---------------|-----|
+
+## Auteur
+* Florian GUILLEMEAU
+* Sylvain LANGENBRONN
