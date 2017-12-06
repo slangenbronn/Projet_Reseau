@@ -90,30 +90,6 @@ int initSocketSansPort(struct in6_addr ip){
 }
 
 /** --Fonction de reception-- */
-/**
- * @brief Bind le socket pour la reception
- * @param sockfd socket à binder
- * @param port pour du socket
- */
-void initReception(int sockfd, int port, struct in6_addr ip){
-    socklen_t addrlen;
-
-    struct sockaddr_in6 my_addr;
-
-    // init local addr structure and other params
-    my_addr.sin6_family = AF_INET6;
-    my_addr.sin6_port   = port;
-    my_addr.sin6_addr   = ip; // Ici pour changer addr serveur.
-    addrlen             = sizeof(struct sockaddr_in6);
-
-    // bind addr structure with socket
-    if(bind(sockfd,(struct sockaddr *)&my_addr,addrlen) == -1)
-    {
-        perror("bind"); 
-        close(sockfd);
-        exit(INIT_RECEIVE);
-    }
-}
 
 /**
  * @brief Reçois un message

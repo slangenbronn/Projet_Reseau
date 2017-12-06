@@ -4,22 +4,29 @@
 serveur \- lance un serveur pouvant stocker des hash et des IP
 .SH SYNOPSYS
 .B serveur 
-ipv6 port [ipv6_server port_server]
+IPV6 PORT [IPV6_SERVER PORT_SERVER]
 .SH DESCRIPTION
 Cree un serveur permettant d'associer des ip a un hash recus par un client ou
-par un autre serveur. Il permet aussi d'envoyer ses IPs et ses hash a la demande.
+par un autre serveur. Il permet aussi d'envoyer ses IPs et ses hash a la demande. Ce serveur a pour adresse ip l'
+.B IP
+donnee en parametre et travail sur le port
+.B PORT.
+Il peut aussi se connecter a un autre serveur ayant pour adresse
+.B IPV6_SERVER
+et travaillant sur le port
+.B PORT_SERVER.
 .SH PARAMETRES
 .TP 
-.B ipv6
+.B IPV6
 Le serveur prendra comme adresse IPv6 celle renseignee, ou l'adresse IPv6 de l'hote si un c'est un nom de domaine qui est donne
 .TP 
-.B port
+.B PORT
 Numero de port sur lequel le serveur doit envoyer et recevoir des messages
 .TP 
-.B ipv6_server
+.B IPV6_SERVER
 Si une autre adresse IPv6 ou un hote est renseigne, alors le serveur ce connectera au serveur possedant cette adresse IPv6. Si une nouvelle adresse est donnee, un numéro de port doit aussi etre renseigne pour etre associe a cette adresse 
 .TP
-.B port_server
+.B PORT_SERVER
 En renseignant une autre adresse IPv6, il est obligatoire de donnee un nouveau numero de port. Ce dernier sera assigne à l'adresse IPv6 du serveur auquel nous voulons connecter notre serveur
 .SH EXEMPLES
 .TP
@@ -29,7 +36,7 @@ Lance un serveur ayant comme ip celle de google.fr et le port 6719:
 google.fr 6719
 .PP
 .TP
-Lande un serveur ayant comme ip l'ip local et le port 8000 en se connectant au serveur precedement cree:
+Lance un serveur ayant comme ip l'ip local et le port 8000 en se connectant au serveur precedement cree:
 
 .B serveur 
 ip6-localhost 8000 google.fr 6719

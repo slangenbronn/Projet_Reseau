@@ -36,7 +36,6 @@ enum error {
 	C_NUM_PORT,
 	C_HASH,
 	INIT_SOCKET,
-	INIT_RECEIVE,
 	RECEIVE,
 	SEND,
 	TYPE,

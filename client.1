@@ -1,0 +1,105 @@
+.TH client 1 "November 30, 2017" "Version 0.1" "USER COMMANDS"
+.DT CLIENT 1
+.SH NOM
+client \- lance un client pouvant envoyer un hash ou demander les IPs associes a un hash a un serveur
+.SH SYNOPSYS
+.B client
+IPV6 PORT COMMAND HASH [IPV6_TO_SAVE]
+.SH DESCRIPTION
+Cree un 
+.B client
+pouvant envoyer (
+.B command
+= PUT ) un 
+.B hash
+a un serveur, qui va l'associer a l'
+.B IP
+donnee en parametre. Ou demander (
+.B command
+= GET ) la liste des IPs que le serveur possede dans se table de hashage matchant le 
+.B hash
+renseigne.
+.SH PARAMETRES
+.TP 
+.B IPV6
+Le client contactera le serveur ayant cette adresse IP
+.TP 
+.B PORT
+Numero du port du serveur sur lequel le client va envoyer ses donnees pour que 
+le serveur puisse les traiter
+.TP 
+.B COMMAND
+Selon la commande, le client va executer differentes actions :
+
+.B GET
+: Demande au serveur 
+.B IPV6
+toutes les IPs qui sont associes au 
+.B HASH 
+passe en parametre et les affiches.
+
+.B PUT
+: Envoi au serveur 
+.B IPV6
+un 
+.B HASH
+et une adresse IPV6
+.B IPV6_TO_SAVE
+pour que le serveur se charge de l'enregistrer dans sa table de hashage.
+.TP
+.B HASH
+Valeur du hash sur lequel nous voulons travailler, que ce soit pour demander les IPs au serveur ou pour envoyer une nouvelle IP pour ce hash
+.TP
+.B IPV6_TO_SAVE
+Adresse IP a enregistrer dans la table de hashage du serveur si la commande
+.B PUT
+est renseigne.
+.SH EXEMPLES
+.TP
+Lance un client qui va ajouter a la  table de hashage du serveur localhost le hash 192a919c271923da17283 (s'il n'existe pas encore) avec l'IP ::1 :
+
+.B client
+localhost 6719 put 192a919c271923da17283 ::1
+.PP
+.TP
+Lance un client qui va recuperer et afficher toutes les IPs qui matcheront le hash dans la table de hashage du serveur :
+
+.B client
+localhost 6719 get 192a919c271923da17283
+.TP
+.B Resultat :
+Hash: 192a919c271923da17283
+
+	ip ::1
+.SH STATUS DE SORTIE
+.TP 
+C_NB_ARGS
+Nombre d'arguments non valide
+.TP 
+C_NUM_PORT
+Numero de port pour la creation du serveur incorrect
+.TP
+C_HASH
+Le hash fourni en parametre n'est pas valide
+.TP
+INIT_SOCKET
+Lors de l'initialisation d'un socket
+.TP
+RECEIVE
+Lors de la reception d'un message
+.TP
+SEND
+Lors de l'envoi d'un message
+.TP
+TYPE
+Si le type de commande renseigne n'est pas connu
+.TP
+FORMAT
+La chaine utilisee pour cree le format de donnee est trop grande
+.TP
+ADRESSE
+L'addresse IPv6 ou l'hote fourni en parametre ne fournisse pas d'adresse IPv6 valide
+.SH AUTEUR
+Ecrit par Florian GUILLEMEAU & Sylvain LANGENBRONN
+.SH VOIR AUSSI
+client(1)
